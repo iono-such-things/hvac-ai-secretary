@@ -31,7 +31,8 @@ jobs:
             if [ -d "$APP_DIR/.git" ]; then
               echo "Pulling latest changes..."
               cd $APP_DIR
-              git pull origin main
+              git fetch origin main
+              git reset --hard origin/main
             else
               echo "Initial clone..."
               git clone $REPO_URL $APP_DIR
