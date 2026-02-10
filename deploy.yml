@@ -9,11 +9,11 @@ on:
 jobs:
   deploy:
     runs-on: ubuntu-latest
-    
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
-      
+
       - name: Deploy to server
         uses: appleboy/ssh-action@v1.0.0
         with:
@@ -22,35 +22,27 @@ jobs:
           password: ${{ secrets.SERVER_PASSWORD }}
           script: |
             set -e
+
             APP_DIR="/var/www/hvac-ai-secretary"
             REPO_URL="https://github.com/dutchiono/hvac-ai-secretary.git"
-            
+
             echo "Starting deployment..."
-            
-            if [ -d "$APP_DIR" ]; then
-              echo "Updating application..."
-              git config --global --add safe.directory "$APP_DIR"
+
+            if [ -d "$APP_DIR/.git" ]; then
+              echo "Pulling latest changes..."
               cd $APP_DIR
-              sudo chown -R hvac:hvac $APP_DIR
               git pull origin main
             else
               echo "Initial clone..."
-              sudo mkdir -p $APP_DIR
-              sudo chown -R hvac:hvac $APP_DIR
               git clone $REPO_URL $APP_DIR
               cd $APP_DIR
             fi
-            
+
             echo "Installing dependencies..."
-            npm install --production
-            
-            echo "Creating empty .env..."
-            touch .env
-            
-            echo "Setting final permissions..."
-            sudo chown -R www-data:www-data $APP_DIR
-            
+            npm install --omit=dev
+
             echo "Restarting service..."
-            sudo systemctl restart hvac-chatbot || echo "Service not configured yet"
-            
+            sudo systemctl restart hvac-ai-secretary
+
             echo "Deployment complete!"
+            sudo systemctl status hvac-ai-secretary --no-pager
