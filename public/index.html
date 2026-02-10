@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>M. Jacob Company - Local Family-Owned Heating & Air Conditioning</title>
     <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="BookingModal.css">
 </head>
 <body>
     <!-- Navigation -->
@@ -66,27 +67,17 @@
                 <div class="service-card">
                     <div class="service-icon">🛠️</div>
                     <h3>System Installation</h3>
-                    <p>Seamless installation of heating and air conditioning systems with industry best practices.</p>
-                </div>
-                <div class="service-card">
-                    <div class="service-icon">⚙️</div>
-                    <h3>Fan Motor Replacement</h3>
-                    <p>Swift and effective fan motor replacement to restore proper airflow and ventilation.</p>
-                </div>
-                <div class="service-card">
-                    <div class="service-icon">🛡️</div>
-                    <h3>Preventative Maintenance</h3>
-                    <p>Check your system twice a year to extend unit life and detect problems before they become major.</p>
+                    <p>Expert installation of new heating and cooling systems with guaranteed quality workmanship.</p>
                 </div>
                 <div class="service-card">
                     <div class="service-icon">❄️</div>
-                    <h3>A/C Repair</h3>
-                    <p>Prompt and reliable A/C repair services to keep you cool and comfortable throughout the year.</p>
+                    <h3>AC Maintenance</h3>
+                    <p>Regular maintenance to ensure your air conditioning runs efficiently all summer long.</p>
                 </div>
                 <div class="service-card">
-                    <div class="service-icon">💧</div>
-                    <h3>Water Tanks</h3>
-                    <p>Upgrade and replace water heaters or make repairs to the current one you have.</p>
+                    <div class="service-icon">🔧</div>
+                    <h3>Emergency Service</h3>
+                    <p>24/7 emergency HVAC repair services available when you need us most.</p>
                 </div>
             </div>
         </div>
@@ -95,23 +86,26 @@
     <!-- About Section -->
     <section id="about" class="about">
         <div class="container">
-            <h2 class="section-title">Why Choose M. Jacob Company?</h2>
+            <h2 class="section-title">About Us</h2>
             <div class="about-content">
-                <div class="about-item">
-                    <h3>Local & Family-Owned</h3>
-                    <p>Mark has done a wide variety of work for customers over the years. Professional, knowledgeable, and efficient - your trusted, go-to specialist.</p>
-                </div>
-                <div class="about-item">
-                    <h3>Full Service HVAC</h3>
-                    <p>From full system inspections to emergency hot water tank replacements, Mark is ready to help with all your heating and cooling needs.</p>
-                </div>
-                <div class="about-item">
-                    <h3>Free Quotes</h3>
-                    <p>Call today for a free quote on any service. No hidden fees or surprises.</p>
-                </div>
-                <div class="about-item">
-                    <h3>Quality Workmanship</h3>
-                    <p>Licensed, insured, and committed to delivering reliable solutions that keep your home comfortable year-round.</p>
+                <p class="about-text">M. Jacob Company is your trusted local HVAC service provider. As a family-owned business, we understand the importance of a comfortable home environment. With years of experience in heating and air conditioning services, we're committed to providing reliable, professional service at fair prices.</p>
+                <div class="features">
+                    <div class="feature">
+                        <span class="feature-icon">✓</span>
+                        <span>Licensed & Insured Professionals</span>
+                    </div>
+                    <div class="feature">
+                        <span class="feature-icon">✓</span>
+                        <span>Upfront, Honest Pricing</span>
+                    </div>
+                    <div class="feature">
+                        <span class="feature-icon">✓</span>
+                        <span>Same-Day Emergency Service</span>
+                    </div>
+                    <div class="feature">
+                        <span class="feature-icon">✓</span>
+                        <span>100% Satisfaction Guaranteed</span>
+                    </div>
                 </div>
             </div>
         </div>
@@ -120,26 +114,37 @@
     <!-- Pricing Section -->
     <section id="pricing" class="pricing">
         <div class="container">
-            <h2 class="section-title">Get a Free Quote Today!</h2>
-            <div class="pricing-content">
-                <p class="pricing-intro">Call us today at <strong><a href="tel:412-512-0425">412-512-0425</a></strong> or use our AI assistant below to get a free quote for any service!</p>
-                <div class="pricing-grid">
-                    <div class="pricing-card">
-                        <h3>Heater Repair</h3>
-                        <p>Keep your home warm all winter with professional heater repair and maintenance.</p>
-                        <button class="btn btn-outline" onclick="openChat('I need heater repair')">Get Quote</button>
-                    </div>
-                    <div class="pricing-card featured">
-                        <div class="popular-badge">Preventative Care</div>
-                        <h3>Maintenance Plans</h3>
-                        <p>Check your system twice a year to extend life and catch problems early.</p>
-                        <button class="btn btn-primary" onclick="openChat('Tell me about maintenance plans')">Learn More</button>
-                    </div>
-                    <div class="pricing-card">
-                        <h3>Emergency Service</h3>
-                        <p>Fast response when you need it most. Available for urgent repairs.</p>
-                        <button class="btn btn-outline" onclick="openChat('I need emergency service')">Contact Us</button>
-                    </div>
+            <h2 class="section-title">Transparent Pricing</h2>
+            <div class="pricing-grid">
+                <div class="pricing-card">
+                    <h3>Diagnostic Fee</h3>
+                    <div class="price">$79</div>
+                    <ul class="pricing-features">
+                        <li>Complete system inspection</li>
+                        <li>Problem diagnosis</li>
+                        <li>Written estimate</li>
+                        <li>Waived with repair</li>
+                    </ul>
+                </div>
+                <div class="pricing-card featured">
+                    <h3>Annual Maintenance</h3>
+                    <div class="price">$149</div>
+                    <ul class="pricing-features">
+                        <li>Comprehensive system check</li>
+                        <li>Cleaning & tune-up</li>
+                        <li>Priority scheduling</li>
+                        <li>10% off repairs</li>
+                    </ul>
+                </div>
+                <div class="pricing-card">
+                    <h3>Emergency Service</h3>
+                    <div class="price">$129</div>
+                    <ul class="pricing-features">
+                        <li>24/7 availability</li>
+                        <li>Same-day service</li>
+                        <li>No overtime charges</li>
+                        <li>Fast response time</li>
+                    </ul>
                 </div>
             </div>
         </div>
@@ -148,77 +153,66 @@
     <!-- Contact Section -->
     <section id="contact" class="contact">
         <div class="container">
-            <h2 class="section-title">Get In Touch</h2>
+            <h2 class="section-title">Contact Us</h2>
             <div class="contact-content">
                 <div class="contact-info">
-                    <h3>Contact Information</h3>
-                    <div class="contact-item">
-                        <strong>Phone:</strong>
-                        <a href="tel:412-512-0425">412-512-0425</a>
+                    <h3>Get in Touch</h3>
+                    <p>Call us today for all your heating and cooling needs!</p>
+                    <div class="contact-details">
+                        <div class="contact-item">
+                            <span class="contact-icon">📞</span>
+                            <a href="tel:412-512-0425">412-512-0425</a>
+                        </div>
+                        <div class="contact-item">
+                            <span class="contact-icon">📧</span>
+                            <span>info@mjacobcompany.com</span>
+                        </div>
+                        <div class="contact-item">
+                            <span class="contact-icon">📍</span>
+                            <span>Serving the Greater Pittsburgh Area</span>
+                        </div>
                     </div>
-                    <div class="contact-item">
-                        <strong>Service Area:</strong>
-                        <p>Pittsburgh and surrounding areas</p>
-                    </div>
-                    <div class="contact-item">
-                        <strong>Available:</strong>
-                        <p>Call for scheduling<br>Emergency service available</p>
-                    </div>
-                </div>
-                <div class="contact-form">
-                    <h3>Schedule a Service</h3>
-                    <p>Use our AI assistant to quickly schedule service, get a quote, or ask any questions about our services!</p>
-                    <button class="btn btn-primary" onclick="openChat('I need to schedule service')">Open Chat Assistant</button>
-                    <p style="margin-top: 1rem;">Or call us directly: <strong><a href="tel:412-512-0425" style="color: #2563eb;">412-512-0425</a></strong></p>
                 </div>
             </div>
         </div>
     </section>
 
-    <!-- Footer -->
-    <footer class="footer">
-        <div class="container">
-            <p>&copy; 2026 M. Jacob Company. All rights reserved.</p>
-            <p>Licensed | Insured | Bonded</p>
-        </div>
-    </footer>
-
-    <!-- Floating Chat Button -->
-    <div class="chat-bubble" id="chatBubble" onclick="toggleChat()">
-        <div class="chat-icon">💬</div>
-        <div class="chat-badge" id="chatBadge">AI</div>
-    </div>
-
-    <!-- Chat Window -->
-    <div class="chat-window" id="chatWindow">
+    <!-- AI Chat Widget -->
+    <div id="chat-widget" class="chat-widget">
         <div class="chat-header">
-            <div class="chat-header-content">
-                <div class="status-dot"></div>
-                <div>
-                    <h3>M. Jacob Company</h3>
-                    <p>AI Assistant</p>
-                </div>
-            </div>
-            <button class="chat-close" onclick="toggleChat()">✕</button>
+            <h3>Chat with Us</h3>
+            <button class="close-chat" onclick="closeChat()">×</button>
         </div>
-        <div class="chat-messages" id="chatMessages">
-            <div class="message bot">
-                <div class="message-content">
-                    Hello! I'm the M. Jacob Company assistant. How can I help you today?
-                </div>
-            </div>
-            <div class="quick-actions" id="quickActions">
-                <button class="quick-action-btn" onclick="sendQuickMessage('Schedule a maintenance appointment')">Schedule Service</button>
-                <button class="quick-action-btn" onclick="sendQuickMessage('Emergency repair needed')">Emergency</button>
-                <button class="quick-action-btn" onclick="sendQuickMessage('Get pricing information')">Pricing</button>
-            </div>
-        </div>
-        <div class="chat-input">
-            <input type="text" id="userInput" placeholder="Type your message..." onkeypress="handleKeyPress(event)">
-            <button onclick="sendMessage()" id="sendButton">Send</button>
+        <div id="chat-messages" class="chat-messages"></div>
+        <div class="chat-input-container">
+            <input type="text" id="chat-input" placeholder="Type your message..." onkeypress="if(event.key==='Enter') sendMessage()">
+            <button onclick="sendMessage()">Send</button>
         </div>
     </div>
 
+    <!-- Chat Bubble -->
+    <div class="chat-bubble" onclick="openChat()">
+        <span class="chat-icon">💬</span>
+    </div>
+
+    <!-- Booking Modal Container -->
+    <div id="booking-modal-root"></div>
+
+    <!-- React and ReactDOM -->
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    
+    <!-- React Calendar -->
+    <script src="https://cdn.jsdelivr.net/npm/react-calendar@4.8.0/dist/umd/Calendar.min.js"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/react-calendar@4.8.0/dist/Calendar.min.css">
+
+    <!-- Babel Standalone for JSX -->
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+    <!-- BookingModal Component -->
+    <script type="text/babel" src="BookingModal.jsx"></script>
+
+    <!-- Main Script -->
     <script src="script.js"></script>
 </body>
 </html>
