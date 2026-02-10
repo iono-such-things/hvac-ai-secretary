@@ -3,6 +3,57 @@ const express = require('express');
 const router = express.Router();
 const { pool } = require('../server');
 const { sendSMS } = require('../utils/sms');
+const OpenAI = require('openai');
+
+const openai = new OpenAI({
+  apiKey: process.env.OPENAI_API_KEY
+});
+
+// System prompt with real M. Jacob Company information
+const SYSTEM_PROMPT = `You are the AI assistant for M. Jacob Company, a local, family-owned heating and air conditioning business serving the greater Pittsburgh area.
+
+COMPANY INFORMATION:
+- Business Name: M. Jacob Company
+- Owner: Mark Jacob
+- Phone: 412-512-0425
+- Service Area: Pittsburgh and surrounding areas
+- Business Type: Local, family-owned HVAC company
+- Reputation: Professional, knowledgeable, and efficient
+
+SERVICES OFFERED:
+1. Heater Repair - Expert furnace and heating system diagnostics and repairs
+2. A/C Repair - Air conditioning system troubleshooting and repair
+3. System Installation - Complete HVAC system installation for new and replacement units
+4. Fan Motor Replacement - Blower motor and fan component replacement
+5. Preventative Maintenance Plan - Scheduled maintenance to keep systems running efficiently
+6. Hot Water Tank Change Out and Repair - Water heater installation, replacement, and repair
+
+CUSTOMER SERVICE APPROACH:
+- Friendly, helpful, and professional tone
+- Quick response times, especially for emergencies
+- Family-oriented service with personal attention
+- Years of trusted service with local customers
+- Free quotes available
+
+YOUR ROLE:
+- Answer questions about HVAC services, pricing, and scheduling
+- Help customers book appointments
+- Provide general HVAC advice and troubleshooting tips
+- Recognize emergency situations (no heat in winter, no AC in summer, gas smell, etc.)
+- Collect customer information when needed
+- Always end conversations by offering to schedule service or provide contact information
+
+EMERGENCY INDICATORS:
+- No heat in winter
+- No AC during hot weather
+- Gas smell or carbon monoxide concerns
+- Water leaks from HVAC systems
+- Strange noises or burning smells
+- System completely not working
+
+For emergencies, prioritize getting customer contact information and address for immediate dispatch.
+
+Keep responses conversational, warm, and helpful - like talking to a trusted local business owner.`;
 
 // Start chat session
 router.post('/start', async (req, res) => {
@@ -36,7 +87,7 @@ router.post('/start', async (req, res) => {
       success: true,
       sessionId: session.rows[0].id,
       customerId: customerId,
-      message: `Hi ${customerName.split(' ')[0]}! 👋 How can I help you today?`
+      message: `Hi ${customerName.split(' ')[0]}! 👋 I'm the AI assistant for M. Jacob Company. How can I help you today?`
     });
     
   } catch (error) {
@@ -56,8 +107,39 @@ router.post('/message', async (req, res) => {
       [sessionId, sender, message]
     );
     
-    // AI Response logic (simplified - you'll integrate with OpenAI/Claude here)
-    let aiResponse = await generateAIResponse(message);
+    // Get conversation history
+    const history = await pool.query(
+      'SELECT messages FROM chat_sessions WHERE id = $1',
+      [sessionId]
+    );
+    
+    // Build messages array for OpenAI
+    const messages = [
+      { role: 'system', content: SYSTEM_PROMPT }
+    ];
+    
+    // Add conversation history
+    if (history.rows[0]?.messages) {
+      history.rows[0].messages.forEach(msg => {
+        messages.push({
+          role: msg.sender === 'user' ? 'user' : 'assistant',
+          content: msg.message
+        });
+      });
+    }
+    
+    // Add current message
+    messages.push({ role: 'user', content: message });
+    
+    // Generate AI response using OpenAI
+    const completion = await openai.chat.completions.create({
+      model: 'gpt-4',
+      messages: messages,
+      temperature: 0.7,
+      max_tokens: 500
+    });
+    
+    const aiResponse = completion.choices[0].message.content;
     
     // Save AI response
     await pool.query(
@@ -72,50 +154,6 @@ router.post('/message', async (req, res) => {
     
   } catch (error) {
     console.error('Chat message error:', error);
-    res.status(500).json({ success: false, error: error.message });
-  }
-});
-
-// Simple AI response generator (replace with actual AI integration)
-async function generateAIResponse(message) {
-  const lowerMsg = message.toLowerCase();
-  
-  // Emergency detection
-  if (lowerMsg.includes('emergency') || lowerMsg.includes('urgent') || lowerMsg.includes('not working')) {
-    return "I understand this is urgent. Let me get your information and we'll have a technician contact you within 15 minutes. What's your address?";
-  }
-  
-  // Booking request
-  if (lowerMsg.includes('appointment') || lowerMsg.includes('schedule') || lowerMsg.includes('book')) {
-    return "I'd be happy to schedule an appointment for you. What type of service do you need? (AC repair, heating, maintenance, etc.)";
-  }
-  
-  // Pricing question
-  if (lowerMsg.includes('cost') || lowerMsg.includes('price') || lowerMsg.includes('how much')) {
-    return "Service call fees start at $89. The total cost depends on the specific repair needed. Would you like to schedule a diagnostic appointment?";
-  }
-  
-  // Default
-  return "I can help you with:\n• Schedule an appointment\n• Emergency service\n• Pricing information\n• Service history\n\nWhat would you like to do?";
-}
-
-// Get chat history
-router.get('/history/:sessionId', async (req, res) => {
-  try {
-    const { sessionId } = req.params;
-    
-    const result = await pool.query(
-      'SELECT * FROM chat_sessions WHERE id = $1',
-      [sessionId]
-    );
-    
-    res.json({
-      success: true,
-      session: result.rows[0]
-    });
-    
-  } catch (error) {
-    console.error('Chat history error:', error);
     res.status(500).json({ success: false, error: error.message });
   }
 });
