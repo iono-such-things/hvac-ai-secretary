@@ -107,55 +107,91 @@ async function sendMessage() {
     try {
         const response = await fetch('/api/chat', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: {
+                'Content-Type': 'application/json'
+            },
             body: JSON.stringify({ message })
         });
 
         const data = await response.json();
+        
+        // Hide typing indicator
         hideTypingIndicator();
 
-        if (response.ok) {
-            addMessage(data.reply, false);
+        if (data.success) {
+            addMessage(data.response, false);
         } else {
-            addMessage('Sorry, I encountered an error. Please try again or call us at 412-512-0425.', false);
+            addMessage('Sorry, I encountered an error. Please try again.', false);
         }
     } catch (error) {
-        console.error('Chat error:', error);
         hideTypingIndicator();
-        addMessage('Sorry, I encountered a connection error. Please try again or call us at 412-512-0425.', false);
+        addMessage('Sorry, I\'m having trouble connecting. Please try again later.', false);
     } finally {
         sendButton.disabled = false;
+        userInput.focus();
     }
-}
-
-// Submit Contact Form
-async function submitContactForm(event) {
-    event.preventDefault();
-    const form = event.target;
-    const formData = new FormData(form);
-    
-    // TODO: Send to server
-    console.log('Contact form submitted:', {
-        name: formData.get('name'),
-        email: formData.get('email'),
-        phone: formData.get('phone'),
-        service: formData.get('service'),
-        message: formData.get('message')
-    });
-    
-    alert('Thank you for your message! We will get back to you soon.');
-    form.reset();
 }
 
 // Event Listeners
 chatBubble.addEventListener('click', toggleChat);
 sendButton.addEventListener('click', sendMessage);
 userInput.addEventListener('keypress', (e) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
-        e.preventDefault();
+    if (e.key === 'Enter') {
         sendMessage();
     }
 });
 
-// Close Chat Button
-document.querySelector('.close-chat')?.addEventListener('click', toggleChat);
+// Booking Modal Management
+let bookingModalRoot = null;
+
+function openBookingModal() {
+    // Get or create the modal root
+    bookingModalRoot = document.getElementById('booking-modal-root');
+    
+    if (!bookingModalRoot) {
+        console.error('Booking modal root element not found');
+        return;
+    }
+
+    // Render the BookingModal component with React
+    const root = ReactDOM.createRoot(bookingModalRoot);
+    root.render(
+        React.createElement(BookingModal, {
+            isOpen: true,
+            onClose: closeBookingModal
+        })
+    );
+}
+
+function closeBookingModal() {
+    if (bookingModalRoot) {
+        const root = ReactDOM.createRoot(bookingModalRoot);
+        root.render(null);
+        bookingModalRoot = null;
+    }
+}
+
+// Connect Schedule Service button to modal
+document.addEventListener('DOMContentLoaded', () => {
+    // Find the Schedule Service button in the hero section
+    const scheduleButtons = document.querySelectorAll('.cta-button');
+    
+    scheduleButtons.forEach(button => {
+        if (button.textContent.includes('Schedule Service')) {
+            button.addEventListener('click', (e) => {
+                e.preventDefault();
+                openBookingModal();
+            });
+        }
+    });
+});
+
+// Initial greeting when chat opens for the first time
+chatBubble.addEventListener('click', function firstOpen() {
+    setTimeout(() => {
+        if (chatMessages.children.length === 1) { // Only quick actions present
+            addMessage('Hi! I\'m your HVAC assistant. How can I help you today?', false);
+        }
+    }, 300);
+    chatBubble.removeEventListener('click', firstOpen);
+}, { once: true });
