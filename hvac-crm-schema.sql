@@ -1,9 +1,9 @@
 -- HVAC AI Secretary - CRM Database Schema
 -- PostgreSQL optimized for performance and scalability
 
--- ============================================================================
+-- ========================================================================
 -- CUSTOMERS TABLE
--- ============================================================================
+-- ========================================================================
 CREATE TABLE customers (
     id SERIAL PRIMARY KEY,
     
@@ -48,9 +48,9 @@ CREATE INDEX idx_customers_email ON customers(email);
 CREATE INDEX idx_customers_zip ON customers(zip_code);
 CREATE INDEX idx_customers_status ON customers(customer_status);
 
--- ============================================================================
+-- ========================================================================
 -- CALL LOGS TABLE
--- ============================================================================
+-- ========================================================================
 CREATE TABLE call_logs (
     id SERIAL PRIMARY KEY,
     customer_id INTEGER REFERENCES customers(id),
@@ -88,265 +88,442 @@ CREATE TABLE call_logs (
 CREATE INDEX idx_call_logs_customer ON call_logs(customer_id);
 CREATE INDEX idx_call_logs_timestamp ON call_logs(call_timestamp);
 CREATE INDEX idx_call_logs_intent ON call_logs(detected_intent);
-CREATE INDEX idx_call_logs_phone ON call_logs(caller_phone);
 
--- ============================================================================
--- APPOINTMENTS TABLE
--- ============================================================================
-CREATE TABLE appointments (
+-- ========================================================================
+-- SERVICE TYPES TABLE
+-- ========================================================================
+CREATE TABLE service_types (
     id SERIAL PRIMARY KEY,
-    customer_id INTEGER NOT NULL REFERENCES customers(id),
     
-    -- Appointment Details
-    appointment_date DATE NOT NULL,
-    appointment_time TIME NOT NULL,
-    appointment_end_time TIME,
-    duration_minutes INTEGER DEFAULT 60,
+    -- Service Definition
+    service_name VARCHAR(100) NOT NULL UNIQUE,
+    service_category VARCHAR(50), -- 'repair', 'maintenance', 'installation', 'emergency'
     
-    -- Service Information
-    service_type VARCHAR(100) NOT NULL, -- 'maintenance', 'repair', 'installation', 'emergency'
-    service_description TEXT,
-    priority_level VARCHAR(20) DEFAULT 'normal', -- 'emergency', 'high', 'normal', 'low'
+    -- Pricing
+    base_price DECIMAL(10,2),
+    price_type VARCHAR(50), -- 'flat_rate', 'hourly', 'estimate_required'
     
-    -- Assignment
-    assigned_technician_id INTEGER,
-    technician_name VARCHAR(100),
+    -- Scheduling
+    typical_duration_minutes INTEGER,
+    requires_estimate BOOLEAN DEFAULT false,
+    priority_level INTEGER DEFAULT 1, -- 1-5, 5 being highest
     
-    -- Status Tracking
-    appointment_status VARCHAR(50) DEFAULT 'scheduled', -- 'scheduled', 'confirmed', 'in_progress', 'completed', 'cancelled', 'no_show'
-    confirmed_by_customer BOOLEAN DEFAULT false,
-    confirmation_sent_at TIMESTAMP,
+    -- Availability
+    available_emergency BOOLEAN DEFAULT false,
+    active BOOLEAN DEFAULT true,
     
-    -- Location
-    service_address VARCHAR(500),
-    
-    -- Notifications
-    reminder_sent BOOLEAN DEFAULT false,
-    reminder_sent_at TIMESTAMP,
-    on_way_notification_sent BOOLEAN DEFAULT false,
-    
-    -- Source
-    booked_via VARCHAR(50), -- 'ai_call', 'web_form', 'manual', 'chat_widget'
-    related_call_log_id INTEGER REFERENCES call_logs(id),
+    -- Description
+    description TEXT,
     
     -- Metadata
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Seed data for common HVAC services
+INSERT INTO service_types (service_name, service_category, base_price, price_type, typical_duration_minutes, requires_estimate, priority_level, available_emergency, description) VALUES
+('Emergency Service Call', 'emergency', 175.00, 'flat_rate', 60, false, 5, true, 'After-hours emergency service for urgent HVAC issues'),
+('Standard Service Call', 'repair', 135.00, 'flat_rate', 60, false, 3, false, 'Standard diagnostic and repair service during business hours'),
+('AC Clean and Check', 'maintenance', 100.00, 'flat_rate', 90, false, 2, false, 'Comprehensive AC system inspection and cleaning'),
+('Furnace Clean and Check', 'maintenance', 100.00, 'flat_rate', 90, false, 2, false, 'Comprehensive furnace inspection and cleaning'),
+('New AC Installation', 'installation', 0.00, 'estimate_required', 480, true, 4, false, 'Complete AC system installation - free estimate'),
+('New Furnace Installation', 'installation', 0.00, 'estimate_required', 480, true, 4, false, 'Complete furnace installation - free estimate'),
+('Duct Cleaning', 'maintenance', 299.00, 'flat_rate', 180, false, 2, false, 'Professional duct cleaning and sanitization'),
+('Thermostat Replacement', 'repair', 150.00, 'flat_rate', 60, false, 2, false, 'Thermostat replacement and programming'),
+('Filter Replacement', 'maintenance', 45.00, 'flat_rate', 15, false, 1, false, 'HVAC filter replacement'),
+('Refrigerant Recharge', 'repair', 250.00, 'estimate_required', 90, false, 3, false, 'AC refrigerant recharge - price varies by system size');
+
+CREATE INDEX idx_service_types_category ON service_types(service_category);
+CREATE INDEX idx_service_types_active ON service_types(active);
+
+-- ========================================================================
+-- APPOINTMENTS TABLE
+-- ========================================================================
+CREATE TABLE appointments (
+    id SERIAL PRIMARY KEY,
+    customer_id INTEGER REFERENCES customers(id),
+    service_type_id INTEGER REFERENCES service_types(id),
+    
+    -- Scheduling
+    scheduled_date DATE NOT NULL,
+    scheduled_time_start TIME NOT NULL,
+    scheduled_time_end TIME,
+    duration_minutes INTEGER,
+    
+    -- Assignment
+    assigned_technician VARCHAR(100),
+    
+    -- Status
+    appointment_status VARCHAR(50) DEFAULT 'scheduled', -- 'scheduled', 'confirmed', 'in_progress', 'completed', 'cancelled', 'no_show'
+    
+    -- Booking Details
+    booking_source VARCHAR(50), -- 'phone_ai', 'online', 'phone_human', 'walk_in'
+    booking_timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    
+    -- Confirmation & Reminders
+    confirmed_at TIMESTAMP,
+    reminder_sent BOOLEAN DEFAULT false,
+    reminder_sent_at TIMESTAMP,
+    
+    -- Cancellation
     cancelled_at TIMESTAMP,
     cancellation_reason TEXT,
     
-    -- Job Outcome (filled after completion)
-    actual_start_time TIMESTAMP,
-    actual_end_time TIMESTAMP,
-    work_completed TEXT,
-    invoice_amount DECIMAL(10,2),
-    payment_status VARCHAR(50) -- 'pending', 'paid', 'overdue'
+    -- Notes
+    appointment_notes TEXT,
+    customer_requests TEXT,
+    
+    -- Metadata
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
 CREATE INDEX idx_appointments_customer ON appointments(customer_id);
-CREATE INDEX idx_appointments_date ON appointments(appointment_date);
+CREATE INDEX idx_appointments_date ON appointments(scheduled_date);
 CREATE INDEX idx_appointments_status ON appointments(appointment_status);
-CREATE INDEX idx_appointments_tech ON appointments(assigned_technician_id);
-CREATE INDEX idx_appointments_priority ON appointments(priority_level);
+CREATE INDEX idx_appointments_technician ON appointments(assigned_technician);
 
--- ============================================================================
--- EQUIPMENT/SYSTEMS TABLE
--- ============================================================================
-CREATE TABLE customer_equipment (
+-- ========================================================================
+-- WORK ORDERS TABLE
+-- ========================================================================
+CREATE TABLE work_orders (
     id SERIAL PRIMARY KEY,
-    customer_id INTEGER NOT NULL REFERENCES customers(id),
+    appointment_id INTEGER REFERENCES appointments(id),
+    customer_id INTEGER REFERENCES customers(id),
+    
+    -- Work Details
+    issue_description TEXT,
+    work_performed TEXT,
+    parts_used TEXT,
+    
+    -- Equipment Information
+    equipment_type VARCHAR(100), -- 'AC', 'Furnace', 'Heat Pump', etc.
+    equipment_brand VARCHAR(100),
+    equipment_model VARCHAR(100),
+    equipment_serial VARCHAR(100),
+    equipment_age_years INTEGER,
+    
+    -- Diagnosis
+    problem_found TEXT,
+    recommended_repairs TEXT,
+    
+    -- Technician
+    technician_name VARCHAR(100),
+    tech_arrival_time TIMESTAMP,
+    tech_departure_time TIMESTAMP,
+    
+    -- Status
+    work_status VARCHAR(50) DEFAULT 'pending', -- 'pending', 'in_progress', 'completed', 'follow_up_needed'
+    
+    -- Pricing
+    labor_charges DECIMAL(10,2),
+    parts_charges DECIMAL(10,2),
+    service_fee DECIMAL(10,2),
+    tax_amount DECIMAL(10,2),
+    total_amount DECIMAL(10,2),
+    
+    -- Payment
+    payment_status VARCHAR(50) DEFAULT 'unpaid', -- 'unpaid', 'paid', 'partial', 'pending'
+    payment_method VARCHAR(50),
+    paid_at TIMESTAMP,
+    
+    -- Photos & Documentation
+    photo_urls TEXT[], -- Array of URLs to uploaded photos
+    
+    -- Customer Approval
+    requires_customer_approval BOOLEAN DEFAULT false,
+    customer_approved BOOLEAN,
+    approval_timestamp TIMESTAMP,
+    
+    -- Metadata
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX idx_work_orders_appointment ON work_orders(appointment_id);
+CREATE INDEX idx_work_orders_customer ON work_orders(customer_id);
+CREATE INDEX idx_work_orders_status ON work_orders(work_status);
+CREATE INDEX idx_work_orders_payment ON work_orders(payment_status);
+
+-- ========================================================================
+-- FOLLOW_UPS TABLE
+-- ========================================================================
+CREATE TABLE follow_ups (
+    id SERIAL PRIMARY KEY,
+    customer_id INTEGER REFERENCES customers(id),
+    work_order_id INTEGER REFERENCES work_orders(id),
+    
+    -- Follow-up Details
+    follow_up_type VARCHAR(50), -- 'satisfaction_check', 'payment_reminder', 'maintenance_reminder', 'quote_follow_up'
+    follow_up_status VARCHAR(50) DEFAULT 'pending', -- 'pending', 'completed', 'cancelled'
+    
+    -- Scheduling
+    scheduled_date DATE,
+    completed_at TIMESTAMP,
+    
+    -- Method
+    contact_method VARCHAR(50), -- 'ai_call', 'human_call', 'email', 'sms'
+    
+    -- Content
+    follow_up_notes TEXT,
+    outcome TEXT,
+    
+    -- Automation
+    auto_scheduled BOOLEAN DEFAULT false,
+    
+    -- Metadata
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX idx_follow_ups_customer ON follow_ups(customer_id);
+CREATE INDEX idx_follow_ups_date ON follow_ups(scheduled_date);
+CREATE INDEX idx_follow_ups_status ON follow_ups(follow_up_status);
+
+-- ========================================================================
+-- REVIEWS TABLE
+-- ========================================================================
+CREATE TABLE reviews (
+    id SERIAL PRIMARY KEY,
+    customer_id INTEGER REFERENCES customers(id),
+    work_order_id INTEGER REFERENCES work_orders(id),
+    
+    -- Rating
+    overall_rating INTEGER, -- 1-5 stars
+    service_quality_rating INTEGER,
+    professionalism_rating INTEGER,
+    communication_rating INTEGER,
+    value_rating INTEGER,
+    
+    -- Review Content
+    review_text TEXT,
+    
+    -- Source
+    review_source VARCHAR(50), -- 'direct', 'google', 'yelp', 'facebook'
+    public_review_url VARCHAR(500),
+    
+    -- Sentiment Analysis
+    sentiment_score DECIMAL(3,2), -- AI-analyzed sentiment
+    
+    -- Status
+    is_published BOOLEAN DEFAULT false,
+    requires_response BOOLEAN DEFAULT false,
+    response_sent BOOLEAN DEFAULT false,
+    
+    -- Metadata
+    review_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX idx_reviews_customer ON reviews(customer_id);
+CREATE INDEX idx_reviews_rating ON reviews(overall_rating);
+
+-- ========================================================================
+-- EQUIPMENT_HISTORY TABLE
+-- ========================================================================
+CREATE TABLE equipment_history (
+    id SERIAL PRIMARY KEY,
+    customer_id INTEGER REFERENCES customers(id),
     
     -- Equipment Details
-    equipment_type VARCHAR(100) NOT NULL, -- 'ac_unit', 'furnace', 'heat_pump', 'thermostat', 'ductwork'
+    equipment_type VARCHAR(100),
     brand VARCHAR(100),
-    model_number VARCHAR(100),
+    model VARCHAR(100),
     serial_number VARCHAR(100),
     
-    -- Installation Info
-    installation_date DATE,
+    -- Installation
+    install_date DATE,
     warranty_expiration DATE,
     
-    -- System Specs
-    capacity VARCHAR(50), -- '3-ton', '4-ton', etc.
-    fuel_type VARCHAR(50), -- 'electric', 'gas', 'oil', 'propane'
+    -- Specifications
+    tonnage DECIMAL(4,2),
+    seer_rating INTEGER,
+    fuel_type VARCHAR(50),
     
     -- Location
-    equipment_location VARCHAR(255), -- 'basement', 'attic', 'outside unit', etc.
+    location_in_home VARCHAR(100), -- 'basement', 'attic', 'closet', etc.
     
     -- Status
     equipment_status VARCHAR(50) DEFAULT 'active', -- 'active', 'replaced', 'removed'
+    
+    -- Service History Reference
     last_service_date DATE,
     next_service_due DATE,
     
+    -- Notes
+    notes TEXT,
+    
     -- Metadata
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    notes TEXT
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
-CREATE INDEX idx_equipment_customer ON customer_equipment(customer_id);
-CREATE INDEX idx_equipment_type ON customer_equipment(equipment_type);
-CREATE INDEX idx_equipment_service_due ON customer_equipment(next_service_due);
+CREATE INDEX idx_equipment_customer ON equipment_history(customer_id);
+CREATE INDEX idx_equipment_next_service ON equipment_history(next_service_due);
 
--- ============================================================================
--- SERVICE HISTORY TABLE
--- ============================================================================
-CREATE TABLE service_history (
+-- ========================================================================
+-- AI_INSIGHTS TABLE
+-- ========================================================================
+CREATE TABLE ai_insights (
     id SERIAL PRIMARY KEY,
-    customer_id INTEGER NOT NULL REFERENCES customers(id),
-    appointment_id INTEGER REFERENCES appointments(id),
-    equipment_id INTEGER REFERENCES customer_equipment(id),
     
-    -- Service Details
-    service_date DATE NOT NULL,
-    service_type VARCHAR(100) NOT NULL,
-    technician_name VARCHAR(100),
+    -- Insight Details
+    insight_type VARCHAR(50), -- 'revenue_opportunity', 'customer_churn_risk', 'efficiency_improvement', 'pricing_anomaly'
+    insight_category VARCHAR(50), -- 'sales', 'operations', 'customer_service', 'marketing'
     
-    -- Work Performed
-    work_description TEXT NOT NULL,
-    parts_used TEXT,
-    labor_hours DECIMAL(4,2),
+    -- Priority
+    priority_score INTEGER, -- 1-100
+    estimated_value DECIMAL(10,2), -- Potential dollar value
     
-    -- Pricing
-    parts_cost DECIMAL(10,2),
-    labor_cost DECIMAL(10,2),
-    total_cost DECIMAL(10,2) NOT NULL,
+    -- Description
+    insight_title VARCHAR(255),
+    insight_description TEXT,
+    recommended_action TEXT,
     
-    -- Photos/Documentation
-    photo_urls TEXT[], -- Array of photo URLs
-    
-    -- Metadata
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-);
-
-CREATE INDEX idx_service_history_customer ON service_history(customer_id);
-CREATE INDEX idx_service_history_date ON service_history(service_date);
-CREATE INDEX idx_service_history_appointment ON service_history(appointment_id);
-
--- ============================================================================
--- SMS/NOTIFICATIONS TABLE
--- ============================================================================
-CREATE TABLE notifications (
-    id SERIAL PRIMARY KEY,
-    customer_id INTEGER REFERENCES customers(id),
-    appointment_id INTEGER REFERENCES appointments(id),
-    
-    -- Notification Details
-    notification_type VARCHAR(50) NOT NULL, -- 'appointment_confirmation', 'reminder', 'tech_on_way', 'payment_reminder', 'follow_up'
-    channel VARCHAR(20) NOT NULL, -- 'sms', 'email', 'both'
-    
-    -- Content
-    subject VARCHAR(255),
-    message_body TEXT NOT NULL,
-    
-    -- Recipient
-    recipient_phone VARCHAR(20),
-    recipient_email VARCHAR(255),
+    -- Related Entities
+    related_customer_id INTEGER REFERENCES customers(id),
+    related_work_order_id INTEGER REFERENCES work_orders(id),
     
     -- Status
-    status VARCHAR(50) DEFAULT 'pending', -- 'pending', 'sent', 'delivered', 'failed', 'clicked'
-    sent_at TIMESTAMP,
-    delivered_at TIMESTAMP,
+    insight_status VARCHAR(50) DEFAULT 'new', -- 'new', 'reviewed', 'actioned', 'dismissed'
+    actioned_at TIMESTAMP,
     
-    -- Twilio Details
-    twilio_message_sid VARCHAR(100),
-    error_message TEXT,
+    -- Metadata
+    generated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    expires_at TIMESTAMP
+);
+
+CREATE INDEX idx_insights_status ON ai_insights(insight_status);
+CREATE INDEX idx_insights_priority ON ai_insights(priority_score);
+CREATE INDEX idx_insights_generated ON ai_insights(generated_at);
+
+-- ========================================================================
+-- CALL_QUEUE TABLE (for AI call handling)
+-- ========================================================================
+CREATE TABLE call_queue (
+    id SERIAL PRIMARY KEY,
     
-    -- Cost
-    cost DECIMAL(6,4),
+    -- Call Details
+    caller_phone VARCHAR(20) NOT NULL,
+    call_sid VARCHAR(100) UNIQUE, -- Twilio/VoIP provider ID
+    
+    -- Queue Status
+    queue_status VARCHAR(50) DEFAULT 'waiting', -- 'waiting', 'in_progress', 'completed', 'abandoned'
+    queue_position INTEGER,
+    
+    -- Timing
+    entered_queue_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    answered_at TIMESTAMP,
+    completed_at TIMESTAMP,
+    wait_time_seconds INTEGER,
+    
+    -- Routing
+    routed_to VARCHAR(50), -- 'ai', 'human', 'voicemail'
+    assigned_agent VARCHAR(100),
+    
+    -- Priority
+    priority_level INTEGER DEFAULT 1, -- Emergency calls get higher priority
+    is_callback BOOLEAN DEFAULT false
+);
+
+CREATE INDEX idx_call_queue_status ON call_queue(queue_status);
+CREATE INDEX idx_call_queue_entered ON call_queue(entered_queue_at);
+
+-- ========================================================================
+-- BUSINESS_HOURS TABLE
+-- ========================================================================
+CREATE TABLE business_hours (
+    id SERIAL PRIMARY KEY,
+    
+    -- Day Configuration
+    day_of_week INTEGER NOT NULL, -- 0=Sunday, 6=Saturday
+    is_open BOOLEAN DEFAULT true,
+    
+    -- Hours
+    open_time TIME,
+    close_time TIME,
+    
+    -- Emergency Coverage
+    emergency_available BOOLEAN DEFAULT false,
+    emergency_phone VARCHAR(20),
+    
+    -- Special Notes
+    notes TEXT,
+    
+    CONSTRAINT unique_day UNIQUE(day_of_week)
+);
+
+-- Seed business hours (Mon-Fri 8am-6pm, Sat 9am-2pm, Sun closed, 24/7 emergency)
+INSERT INTO business_hours (day_of_week, is_open, open_time, close_time, emergency_available) VALUES
+(0, false, null, null, true), -- Sunday
+(1, true, '08:00:00', '18:00:00', true), -- Monday
+(2, true, '08:00:00', '18:00:00', true), -- Tuesday
+(3, true, '08:00:00', '18:00:00', true), -- Wednesday
+(4, true, '08:00:00', '18:00:00', true), -- Thursday
+(5, true, '08:00:00', '18:00:00', true), -- Friday
+(6, true, '09:00:00', '14:00:00', true); -- Saturday
+
+-- ========================================================================
+-- AUTOMATED_TASKS TABLE
+-- ========================================================================
+CREATE TABLE automated_tasks (
+    id SERIAL PRIMARY KEY,
+    
+    -- Task Definition
+    task_type VARCHAR(100), -- 'send_reminder', 'follow_up_call', 'request_review', 'maintenance_reminder'
+    task_name VARCHAR(255),
+    
+    -- Trigger Conditions
+    trigger_event VARCHAR(100), -- 'days_after_service', 'days_before_appointment', 'seasonal'
+    trigger_offset_days INTEGER,
+    
+    -- Execution
+    execution_method VARCHAR(50), -- 'ai_call', 'sms', 'email'
+    template_content TEXT,
+    
+    -- Status
+    is_active BOOLEAN DEFAULT true,
+    
+    -- Statistics
+    total_executions INTEGER DEFAULT 0,
+    success_count INTEGER DEFAULT 0,
+    last_executed_at TIMESTAMP,
     
     -- Metadata
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
-CREATE INDEX idx_notifications_customer ON notifications(customer_id);
-CREATE INDEX idx_notifications_appointment ON notifications(appointment_id);
-CREATE INDEX idx_notifications_status ON notifications(status);
-CREATE INDEX idx_notifications_type ON notifications(notification_type);
-
--- ============================================================================
--- TECHNICIANS TABLE
--- ============================================================================
-CREATE TABLE technicians (
+-- ========================================================================
+-- PRICING_RULES TABLE
+-- ========================================================================
+CREATE TABLE pricing_rules (
     id SERIAL PRIMARY KEY,
     
-    -- Basic Info
-    first_name VARCHAR(100) NOT NULL,
-    last_name VARCHAR(100) NOT NULL,
-    phone VARCHAR(20) NOT NULL,
-    email VARCHAR(255),
+    -- Rule Definition
+    rule_name VARCHAR(100),
+    rule_type VARCHAR(50), -- 'time_multiplier', 'geographic', 'customer_tier', 'seasonal'
     
-    -- Employment
-    employee_id VARCHAR(50),
-    hire_date DATE,
-    employment_status VARCHAR(50) DEFAULT 'active', -- 'active', 'inactive', 'on_leave'
+    -- Conditions
+    applies_to_service_ids INTEGER[], -- Array of service_type IDs
+    time_conditions VARCHAR(100), -- 'after_hours', 'weekends', 'holidays'
+    geographic_conditions VARCHAR(100),
     
-    -- Skills & Certifications
-    certifications TEXT[],
-    specialties TEXT[], -- 'hvac', 'plumbing', 'electrical', etc.
+    -- Pricing Adjustment
+    adjustment_type VARCHAR(50), -- 'percentage', 'fixed_amount'
+    adjustment_value DECIMAL(10,2),
     
-    -- Scheduling
-    default_schedule JSONB, -- {monday: {start: '08:00', end: '17:00'}, ...}
-    on_call_rotation BOOLEAN DEFAULT false,
-    
-    -- Performance
-    jobs_completed INTEGER DEFAULT 0,
-    average_rating DECIMAL(3,2),
+    -- Status
+    is_active BOOLEAN DEFAULT true,
+    effective_start_date DATE,
+    effective_end_date DATE,
     
     -- Metadata
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
-CREATE INDEX idx_technicians_status ON technicians(employment_status);
+-- ========================================================================
+-- VIEWS FOR COMMON QUERIES
+-- ========================================================================
 
--- ============================================================================
--- BUSINESS SETTINGS TABLE
--- ============================================================================
-CREATE TABLE business_settings (
-    id SERIAL PRIMARY KEY,
-    setting_key VARCHAR(100) UNIQUE NOT NULL,
-    setting_value TEXT NOT NULL,
-    setting_type VARCHAR(50) DEFAULT 'string', -- 'string', 'number', 'boolean', 'json'
-    description TEXT,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-);
-
--- Seed with common settings
-INSERT INTO business_settings (setting_key, setting_value, setting_type, description) VALUES
-('business_name', 'Cool Comfort HVAC', 'string', 'Business name for AI greeting'),
-('business_phone', '555-123-4567', 'string', 'Main business phone number'),
-('service_area_zips', '["78701", "78702", "78703", "78704", "78705"]', 'json', 'Service area zip codes'),
-('business_hours', '{"monday": {"open": "08:00", "close": "17:00"}}', 'json', 'Regular business hours'),
-('service_call_fee', '89.00', 'number', 'Standard service call fee'),
-('emergency_surcharge', '50.00', 'number', 'Emergency after-hours surcharge'),
-('ai_assistant_name', 'Riley', 'string', 'AI voice assistant name'),
-('emergency_response_time', '15', 'number', 'Minutes to respond to emergencies');
-
--- ============================================================================
--- ANALYTICS/METRICS VIEW
--- ============================================================================
-CREATE VIEW daily_metrics AS
-SELECT 
-    DATE(call_timestamp) as metric_date,
-    COUNT(*) as total_calls,
-    COUNT(CASE WHEN appointment_booked = true THEN 1 END) as appointments_booked,
-    COUNT(CASE WHEN detected_intent = 'emergency' THEN 1 END) as emergency_calls,
-    COUNT(CASE WHEN transferred_to_human = true THEN 1 END) as human_transfers,
-    AVG(call_duration_seconds) as avg_call_duration,
-    SUM(total_call_cost) as total_call_costs,
-    ROUND(
-        CAST(COUNT(CASE WHEN appointment_booked = true THEN 1 END) AS DECIMAL) / 
-        NULLIF(COUNT(*), 0) * 100, 
-        2
-    ) as booking_conversion_rate
-FROM call_logs
-GROUP BY DATE(call_timestamp)
-ORDER BY metric_date DESC;
-
--- ============================================================================
--- CUSTOMER LIFETIME VALUE VIEW
--- ============================================================================
+-- Customer Lifetime Value View
 CREATE VIEW customer_lifetime_value AS
 SELECT 
     c.id as customer_id,
@@ -354,49 +531,66 @@ SELECT
     c.last_name,
     c.phone,
     COUNT(DISTINCT a.id) as total_appointments,
-    COUNT(DISTINCT sh.id) as total_services,
-    COALESCE(SUM(sh.total_cost), 0) as lifetime_value,
-    MAX(a.appointment_date) as last_service_date,
-    c.created_at as customer_since
+    COUNT(DISTINCT wo.id) as total_work_orders,
+    COALESCE(SUM(wo.total_amount), 0) as lifetime_revenue,
+    MAX(wo.created_at) as last_service_date,
+    AVG(r.overall_rating) as average_rating
 FROM customers c
 LEFT JOIN appointments a ON c.id = a.customer_id
-LEFT JOIN service_history sh ON c.id = sh.customer_id
-GROUP BY c.id, c.first_name, c.last_name, c.phone, c.created_at
-ORDER BY lifetime_value DESC;
+LEFT JOIN work_orders wo ON c.id = wo.customer_id
+LEFT JOIN reviews r ON c.id = r.customer_id
+GROUP BY c.id, c.first_name, c.last_name, c.phone;
 
--- ============================================================================
--- UPCOMING APPOINTMENTS VIEW
--- ============================================================================
-CREATE VIEW upcoming_appointments AS
+-- Today's Appointments View
+CREATE VIEW todays_appointments AS
 SELECT 
     a.id,
-    a.appointment_date,
-    a.appointment_time,
-    c.first_name || ' ' || c.last_name as customer_name,
-    c.phone as customer_phone,
-    a.service_type,
-    a.service_description,
-    a.assigned_technician_id,
-    a.technician_name,
+    a.scheduled_date,
+    a.scheduled_time_start,
+    c.first_name,
+    c.last_name,
+    c.phone,
+    c.street_address,
+    c.city,
+    c.zip_code,
+    st.service_name,
     a.appointment_status,
-    a.priority_level,
-    a.reminder_sent,
-    CASE 
-        WHEN a.appointment_date = CURRENT_DATE THEN 'today'
-        WHEN a.appointment_date = CURRENT_DATE + INTERVAL '1 day' THEN 'tomorrow'
-        ELSE 'upcoming'
-    END as time_category
+    a.assigned_technician,
+    a.appointment_notes
 FROM appointments a
 JOIN customers c ON a.customer_id = c.id
-WHERE a.appointment_status IN ('scheduled', 'confirmed')
-  AND a.appointment_date >= CURRENT_DATE
-ORDER BY a.appointment_date, a.appointment_time;
+JOIN service_types st ON a.service_type_id = st.id
+WHERE a.scheduled_date = CURRENT_DATE
+ORDER BY a.scheduled_time_start;
 
--- ============================================================================
--- AUTO-UPDATE TRIGGERS
--- ============================================================================
+-- Pending Payments View
+CREATE VIEW pending_payments AS
+SELECT 
+    wo.id as work_order_id,
+    c.first_name,
+    c.last_name,
+    c.phone,
+    c.email,
+    wo.total_amount,
+    wo.payment_status,
+    wo.created_at as service_date,
+    CURRENT_DATE - wo.created_at::date as days_outstanding
+FROM work_orders wo
+JOIN customers c ON wo.customer_id = c.id
+WHERE wo.payment_status IN ('unpaid', 'partial')
+ORDER BY wo.created_at DESC;
 
--- Update customer.updated_at on any change
+-- High-Value Customers View
+CREATE VIEW high_value_customers AS
+SELECT * FROM customer_lifetime_value
+WHERE lifetime_revenue > 1000
+ORDER BY lifetime_revenue DESC;
+
+-- ========================================================================
+-- TRIGGERS FOR AUTOMATIC UPDATES
+-- ========================================================================
+
+-- Auto-update updated_at timestamp
 CREATE OR REPLACE FUNCTION update_updated_at_column()
 RETURNS TRIGGER AS $$
 BEGIN
@@ -411,50 +605,44 @@ CREATE TRIGGER update_customers_updated_at BEFORE UPDATE ON customers
 CREATE TRIGGER update_appointments_updated_at BEFORE UPDATE ON appointments
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
--- Update customer.last_contact_date on new call
-CREATE OR REPLACE FUNCTION update_customer_last_contact()
-RETURNS TRIGGER AS $$
-BEGIN
-    UPDATE customers 
-    SET last_contact_date = NEW.call_timestamp
-    WHERE id = NEW.customer_id;
-    RETURN NEW;
-END;
-$$ language 'plpgsql';
+CREATE TRIGGER update_work_orders_updated_at BEFORE UPDATE ON work_orders
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
-CREATE TRIGGER update_last_contact_on_call AFTER INSERT ON call_logs
-    FOR EACH ROW EXECUTE FUNCTION update_customer_last_contact();
+CREATE TRIGGER update_equipment_history_updated_at BEFORE UPDATE ON equipment_history
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
--- ============================================================================
--- SAMPLE QUERIES FOR COMMON OPERATIONS
--- ============================================================================
+-- ========================================================================
+-- PERFORMANCE OPTIMIZATION
+-- ========================================================================
 
--- Find customer by phone number
--- SELECT * FROM customers WHERE phone = '512-555-1234';
+-- Enable parallel query execution
+ALTER TABLE customers SET (parallel_workers = 4);
+ALTER TABLE appointments SET (parallel_workers = 4);
+ALTER TABLE work_orders SET (parallel_workers = 4);
 
--- Get customer's appointment history
--- SELECT * FROM appointments WHERE customer_id = 1 ORDER BY appointment_date DESC;
+-- Statistics for query planner
+ANALYZE customers;
+ANALYZE appointments;
+ANALYZE work_orders;
+ANALYZE call_logs;
 
--- Today's schedule for a technician
--- SELECT * FROM upcoming_appointments WHERE technician_name = 'John Smith' AND time_category = 'today';
-
--- Customers due for maintenance (90 days since last service)
--- SELECT c.*, MAX(a.appointment_date) as last_service
--- FROM customers c
--- JOIN appointments a ON c.id = a.customer_id
--- WHERE a.service_type = 'maintenance'
--- GROUP BY c.id
--- HAVING MAX(a.appointment_date) < CURRENT_DATE - INTERVAL '90 days';
-
--- Emergency calls in last 24 hours
--- SELECT * FROM call_logs 
--- WHERE detected_intent = 'emergency' 
---   AND call_timestamp > CURRENT_TIMESTAMP - INTERVAL '24 hours';
-
--- Conversion rate by source
--- SELECT 
---     source,
---     COUNT(*) as total_customers,
---     SUM(CASE WHEN customer_status = 'active' THEN 1 ELSE 0 END) as active_customers
--- FROM customers
--- GROUP BY source;
+-- ========================================================================
+-- NOTES
+-- ========================================================================
+-- This schema is designed for:
+-- 1. Fast customer lookups during AI phone calls
+-- 2. Efficient appointment scheduling and management
+-- 3. Complete service history tracking
+-- 4. Revenue and business intelligence reporting
+-- 5. Automated follow-ups and reminders
+-- 6. Integration with AI voice systems (Twilio, ElevenLabs, etc.)
+--
+-- Key Features:
+-- - Phone number-based customer identification
+-- - AI call intent detection and routing
+-- - Comprehensive service type catalog
+-- - Work order and payment tracking
+-- - Equipment history for maintenance scheduling
+-- - Business intelligence views for common queries
+-- - Automated task scheduling
+-- - Flexible pricing rules engine
