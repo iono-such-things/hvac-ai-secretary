@@ -33,7 +33,7 @@
                 <h2>Professional Heating & Air Conditioning</h2>
                 <p>Local, family-owned business providing reliable HVAC solutions for your home</p>
                 <div class="hero-buttons">
-                    <button class="btn btn-primary" onclick="openChat('I need to schedule service')">Schedule Service</button>
+                    <button class="btn btn-primary" onclick="openBookingModal()">Schedule Service</button>
                     <button class="btn btn-secondary" onclick="window.location.href='tel:412-512-0425'">Call for Free Quote</button>
                 </div>
                 <div class="trust-badges">
@@ -141,7 +141,7 @@
                         <li>Efficiency optimization</li>
                         <li>Performance report</li>
                     </ul>
-                    <button class="btn btn-primary" onclick="openChat('I want to schedule a Clean and Check')">Schedule Now</button>
+                    <button class="btn btn-primary" onclick="openBookingModal(1, 'Clean and Check')">Schedule Now</button>
                 </div>
                 <div class="pricing-card featured">
                     <div class="popular-badge">Most Popular</div>
@@ -154,7 +154,7 @@
                         <li>Same-day service available</li>
                         <li>Quality guaranteed</li>
                     </ul>
-                    <button class="btn btn-primary" onclick="openChat('I need a service call')">Request Service</button>
+                    <button class="btn btn-primary" onclick="openBookingModal(2, 'Service Call')">Request Service</button>
                 </div>
                 <div class="pricing-card">
                     <h3>Installation Services</h3>
@@ -166,7 +166,7 @@
                         <li>Custom pricing for your needs</li>
                         <li>Professional assessment</li>
                     </ul>
-                    <button class="btn btn-primary" onclick="openChat('I need an installation estimate')">Get Free Estimate</button>
+                    <button class="btn btn-primary" onclick="openBookingModal(3, 'Installation')">Get Free Estimate</button>
                 </div>
             </div>
             <div class="pricing-note">
@@ -210,7 +210,7 @@
                 <div class="contact-cta">
                     <h3>Ready to Get Started?</h3>
                     <p>Schedule your service or get a free quote today. Our friendly team is here to help!</p>
-                    <button class="btn btn-primary btn-large" onclick="openChat('I would like to schedule service')">Chat With Us Now</button>
+                    <button class="btn btn-primary btn-large" onclick="openBookingModal()">Schedule Service Now</button>
                 </div>
             </div>
         </div>
@@ -246,24 +246,129 @@
         </div>
     </footer>
 
-    <!-- AI Chat Widget -->
-    <div id="chat-widget">
-        <button id="chat-button" onclick="toggleChat()">
-            <span id="chat-icon">💬</span>
-        </button>
-        <div id="chat-container" style="display: none;">
-            <div id="chat-header">
-                <h3>Chat with us</h3>
-                <button id="close-chat" onclick="toggleChat()">×</button>
-            </div>
-            <div id="chat-messages"></div>
-            <div id="chat-input-container">
-                <input type="text" id="chat-input" placeholder="Type your message...">
-                <button id="send-button" onclick="sendMessage()">Send</button>
-            </div>
+    <!-- Booking Modal -->
+    <div id="bookingModal" class="modal">
+        <div class="modal-content" id="bookingModalContent">
+            <span class="modal-close" onclick="closeBookingModal()">&times;</span>
+            <h2>Schedule Your Service</h2>
+            
+            <div id="bookingError" class="alert alert-error" style="display: none;"></div>
+            <div id="bookingSuccess" class="alert alert-success" style="display: none;"></div>
+            
+            <form id="bookingForm" onsubmit="handleBookingSubmit(event)">
+                <div class="form-section">
+                    <h3>Contact Information</h3>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="customerName">Full Name *</label>
+                            <input type="text" id="customerName" name="customerName" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="phone">Phone Number *</label>
+                            <input type="tel" id="phone" name="phone" placeholder="412-555-1234" required>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label for="email">Email Address</label>
+                        <input type="email" id="email" name="email" placeholder="your@email.com">
+                    </div>
+                </div>
+
+                <div class="form-section">
+                    <h3>Service Location</h3>
+                    <div class="form-group">
+                        <label for="address">Street Address *</label>
+                        <input type="text" id="address" name="address" required>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="city">City *</label>
+                            <input type="text" id="city" name="city" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="state">State *</label>
+                            <input type="text" id="state" name="state" value="PA" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="zip">ZIP Code *</label>
+                            <input type="text" id="zip" name="zip" pattern="[0-9]{5}" required>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="form-section">
+                    <h3>Service Details</h3>
+                    <div class="form-group">
+                        <label for="serviceType">Service Type *</label>
+                        <select id="serviceType" name="serviceType" required>
+                            <option value="">Select a service</option>
+                            <option value="1">Clean and Check - $100</option>
+                            <option value="2">Service Call - $135</option>
+                            <option value="3">Installation - Free Estimate</option>
+                            <option value="4">Emergency Service</option>
+                        </select>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="preferredDate">Preferred Date *</label>
+                            <input type="date" id="preferredDate" name="preferredDate" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="preferredTime">Preferred Time *</label>
+                            <select id="preferredTime" name="preferredTime" required>
+                                <option value="">Select time</option>
+                                <option value="08:00">8:00 AM</option>
+                                <option value="09:00">9:00 AM</option>
+                                <option value="10:00">10:00 AM</option>
+                                <option value="11:00">11:00 AM</option>
+                                <option value="12:00">12:00 PM</option>
+                                <option value="13:00">1:00 PM</option>
+                                <option value="14:00">2:00 PM</option>
+                                <option value="15:00">3:00 PM</option>
+                                <option value="16:00">4:00 PM</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label for="issueDescription">Describe the Issue *</label>
+                        <textarea id="issueDescription" name="issueDescription" rows="3" placeholder="Please describe what's happening with your HVAC system..." required></textarea>
+                    </div>
+                </div>
+
+                <div class="form-section">
+                    <h3>HVAC System Information (Optional)</h3>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="hvacType">System Type</label>
+                            <select id="hvacType" name="hvacType">
+                                <option value="">Select type</option>
+                                <option value="Central Air">Central Air</option>
+                                <option value="Heat Pump">Heat Pump</option>
+                                <option value="Furnace">Furnace</option>
+                                <option value="Boiler">Boiler</option>
+                                <option value="Ductless Mini-Split">Ductless Mini-Split</option>
+                                <option value="Other">Other</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="hvacAge">System Age (years)</label>
+                            <input type="number" id="hvacAge" name="hvacAge" min="0" max="50">
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label for="notes">Additional Notes</label>
+                        <textarea id="notes" name="notes" rows="2" placeholder="Any additional information we should know..."></textarea>
+                    </div>
+                </div>
+
+                <div class="form-actions">
+                    <button type="button" class="btn btn-secondary" onclick="closeBookingModal()">Cancel</button>
+                    <button type="submit" id="submitBooking" class="btn btn-primary">Submit Booking Request</button>
+                </div>
+            </form>
         </div>
     </div>
 
-    <script src="script.js"></script>
+    <script src="booking.js"></script>
 </body>
 </html>
