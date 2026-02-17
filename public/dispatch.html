@@ -1,0 +1,573 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dispatch Dashboard - HVAC CRM</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: #f5f5f5;
+            color: #333;
+        }
+
+        .header {
+            background: #2c3e50;
+            color: white;
+            padding: 1rem 2rem;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .header h1 {
+            font-size: 1.5rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .header .subtitle {
+            opacity: 0.8;
+            font-size: 0.9rem;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+            padding: 2rem;
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        .stat-card {
+            background: white;
+            padding: 1.5rem;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .stat-card h3 {
+            font-size: 0.9rem;
+            color: #666;
+            margin-bottom: 0.5rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .stat-card .number {
+            font-size: 2.5rem;
+            font-weight: bold;
+            color: #2c3e50;
+        }
+
+        .stat-card.pending .number { color: #f39c12; }
+        .stat-card.scheduled .number { color: #3498db; }
+        .stat-card.in-progress .number { color: #e74c3c; }
+        .stat-card.completed .number { color: #27ae60; }
+
+        .main-content {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 0 2rem 2rem;
+        }
+
+        .controls {
+            background: white;
+            padding: 1.5rem;
+            border-radius: 8px;
+            margin-bottom: 1.5rem;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            display: flex;
+            gap: 1rem;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+
+        .controls label {
+            font-weight: 600;
+            margin-right: 0.5rem;
+        }
+
+        .controls select, .controls input {
+            padding: 0.5rem;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 0.9rem;
+        }
+
+        .controls button {
+            padding: 0.5rem 1.5rem;
+            background: #3498db;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: 600;
+        }
+
+        .controls button:hover {
+            background: #2980b9;
+        }
+
+        .bookings-section {
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+
+        .section-header {
+            padding: 1.5rem;
+            background: #34495e;
+            color: white;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .section-header h2 {
+            font-size: 1.2rem;
+        }
+
+        .bookings-list {
+            max-height: 600px;
+            overflow-y: auto;
+        }
+
+        .booking-card {
+            border-bottom: 1px solid #eee;
+            padding: 1.5rem;
+            display: grid;
+            grid-template-columns: auto 1fr auto;
+            gap: 1.5rem;
+            align-items: start;
+            transition: background 0.2s;
+        }
+
+        .booking-card:hover {
+            background: #f9f9f9;
+        }
+
+        .booking-card:last-child {
+            border-bottom: none;
+        }
+
+        .status-badge {
+            padding: 0.5rem 1rem;
+            border-radius: 20px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            white-space: nowrap;
+        }
+
+        .status-badge.pending {
+            background: #fff3cd;
+            color: #856404;
+        }
+
+        .status-badge.scheduled {
+            background: #d1ecf1;
+            color: #0c5460;
+        }
+
+        .status-badge.in_progress {
+            background: #f8d7da;
+            color: #721c24;
+        }
+
+        .status-badge.completed {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .booking-info {
+            flex: 1;
+        }
+
+        .booking-header {
+            display: flex;
+            gap: 1rem;
+            align-items: center;
+            margin-bottom: 0.5rem;
+        }
+
+        .customer-name {
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: #2c3e50;
+        }
+
+        .service-type {
+            color: #3498db;
+            font-weight: 600;
+        }
+
+        .booking-details {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 0.5rem;
+            margin: 0.5rem 0;
+            color: #666;
+            font-size: 0.9rem;
+        }
+
+        .detail-item {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .detail-item strong {
+            color: #2c3e50;
+        }
+
+        .booking-actions {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+
+        .booking-actions select {
+            padding: 0.5rem;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 0.85rem;
+        }
+
+        .booking-actions button {
+            padding: 0.5rem 1rem;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.85rem;
+            font-weight: 600;
+            transition: all 0.2s;
+        }
+
+        .btn-assign {
+            background: #3498db;
+            color: white;
+        }
+
+        .btn-assign:hover {
+            background: #2980b9;
+        }
+
+        .btn-view {
+            background: #95a5a6;
+            color: white;
+        }
+
+        .btn-view:hover {
+            background: #7f8c8d;
+        }
+
+        .priority-high { border-left: 4px solid #e74c3c; }
+        .priority-medium { border-left: 4px solid #f39c12; }
+        .priority-low { border-left: 4px solid #95a5a6; }
+
+        .tech-assigned {
+            background: #ecf0f1;
+            padding: 0.5rem;
+            border-radius: 4px;
+            margin-top: 0.5rem;
+            font-size: 0.85rem;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 3rem;
+            color: #666;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 3rem;
+            color: #999;
+        }
+
+        .empty-state h3 {
+            margin-bottom: 0.5rem;
+        }
+
+        @media (max-width: 768px) {
+            .booking-card {
+                grid-template-columns: 1fr;
+            }
+
+            .booking-actions {
+                flex-direction: row;
+            }
+
+            .stats-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>🔧 Dispatch Dashboard</h1>
+        <div class="subtitle">HVAC Service Management</div>
+    </div>
+
+    <div class="stats-grid" id="statsGrid">
+        <div class="stat-card pending">
+            <h3>Pending</h3>
+            <div class="number" id="statPending">-</div>
+        </div>
+        <div class="stat-card scheduled">
+            <h3>Scheduled</h3>
+            <div class="number" id="statScheduled">-</div>
+        </div>
+        <div class="stat-card in-progress">
+            <h3>In Progress</h3>
+            <div class="number" id="statInProgress">-</div>
+        </div>
+        <div class="stat-card completed">
+            <h3>Completed Today</h3>
+            <div class="number" id="statCompleted">-</div>
+        </div>
+        <div class="stat-card">
+            <h3>Today's Schedule</h3>
+            <div class="number" id="statToday">-</div>
+        </div>
+        <div class="stat-card">
+            <h3>Tomorrow</h3>
+            <div class="number" id="statTomorrow">-</div>
+        </div>
+    </div>
+
+    <div class="main-content">
+        <div class="controls">
+            <div>
+                <label>Filter by Status:</label>
+                <select id="filterStatus">
+                    <option value="">All Jobs</option>
+                    <option value="pending">Pending</option>
+                    <option value="scheduled">Scheduled</option>
+                    <option value="in_progress">In Progress</option>
+                    <option value="completed">Completed</option>
+                </select>
+            </div>
+            <div>
+                <label>Filter by Date:</label>
+                <input type="date" id="filterDate">
+            </div>
+            <div>
+                <label>Filter by Tech:</label>
+                <select id="filterTech">
+                    <option value="">All Technicians</option>
+                </select>
+            </div>
+            <button onclick="loadBookings()">🔄 Refresh</button>
+        </div>
+
+        <div class="bookings-section">
+            <div class="section-header">
+                <h2>Service Requests</h2>
+                <span id="bookingCount">0 jobs</span>
+            </div>
+            <div class="bookings-list" id="bookingsList">
+                <div class="loading">Loading bookings...</div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = window.location.origin;
+        let technicians = [];
+
+        // Load dashboard data on page load
+        document.addEventListener('DOMContentLoaded', () => {
+            loadStats();
+            loadTechnicians();
+            loadBookings();
+
+            // Set up filter change listeners
+            document.getElementById('filterStatus').addEventListener('change', loadBookings);
+            document.getElementById('filterDate').addEventListener('change', loadBookings);
+            document.getElementById('filterTech').addEventListener('change', loadBookings);
+
+            // Auto-refresh every 30 seconds
+            setInterval(() => {
+                loadStats();
+                loadBookings();
+            }, 30000);
+        });
+
+        async function loadStats() {
+            try {
+                const response = await fetch(`${API_BASE}/api/dispatch/stats`);
+                const data = await response.json();
+                
+                if (data.success) {
+                    const stats = data.stats;
+                    document.getElementById('statPending').textContent = stats.pending_count || 0;
+                    document.getElementById('statScheduled').textContent = stats.scheduled_count || 0;
+                    document.getElementById('statInProgress').textContent = stats.in_progress_count || 0;
+                    document.getElementById('statCompleted').textContent = stats.completed_today || 0;
+                    document.getElementById('statToday').textContent = stats.scheduled_today || 0;
+                    document.getElementById('statTomorrow').textContent = stats.scheduled_tomorrow || 0;
+                }
+            } catch (error) {
+                console.error('Failed to load stats:', error);
+            }
+        }
+
+        async function loadTechnicians() {
+            try {
+                const response = await fetch(`${API_BASE}/api/dispatch/technicians`);
+                const data = await response.json();
+                
+                if (data.success) {
+                    technicians = data.technicians;
+                    const select = document.getElementById('filterTech');
+                    
+                    technicians.forEach(tech => {
+                        const option = document.createElement('option');
+                        option.value = tech.tech_id;
+                        option.textContent = `${tech.name} (${tech.active_jobs} active)`;
+                        select.appendChild(option);
+                    });
+                }
+            } catch (error) {
+                console.error('Failed to load technicians:', error);
+            }
+        }
+
+        async function loadBookings() {
+            const status = document.getElementById('filterStatus').value;
+            const date = document.getElementById('filterDate').value;
+            const techId = document.getElementById('filterTech').value;
+
+            const params = new URLSearchParams();
+            if (status) params.append('status', status);
+            if (date) params.append('date', date);
+            if (techId) params.append('tech_id', techId);
+
+            try {
+                const response = await fetch(`${API_BASE}/api/dispatch/bookings?${params}`);
+                const data = await response.json();
+                
+                if (data.success) {
+                    renderBookings(data.bookings);
+                    document.getElementById('bookingCount').textContent = `${data.count} job${data.count !== 1 ? 's' : ''}`;
+                }
+            } catch (error) {
+                console.error('Failed to load bookings:', error);
+                document.getElementById('bookingsList').innerHTML = '<div class="empty-state"><h3>Error loading bookings</h3><p>Please try again</p></div>';
+            }
+        }
+
+        function renderBookings(bookings) {
+            const container = document.getElementById('bookingsList');
+            
+            if (bookings.length === 0) {
+                container.innerHTML = '<div class="empty-state"><h3>No bookings found</h3><p>Try adjusting your filters</p></div>';
+                return;
+            }
+
+            container.innerHTML = bookings.map(booking => `
+                <div class="booking-card priority-${booking.priority}" data-id="${booking.request_id}">
+                    <div class="status-badge ${booking.status}">${booking.status.replace('_', ' ')}</div>
+                    
+                    <div class="booking-info">
+                        <div class="booking-header">
+                            <div class="customer-name">${booking.customer_name}</div>
+                            <div class="service-type">${booking.service_name || 'Service Call'}</div>
+                        </div>
+                        
+                        <div class="booking-details">
+                            <div class="detail-item">
+                                📞 <strong>${booking.customer_phone}</strong>
+                            </div>
+                            <div class="detail-item">
+                                📍 ${booking.address}, ${booking.city}, ${booking.state}
+                            </div>
+                            <div class="detail-item">
+                                📅 ${booking.scheduled_date || booking.preferred_date || 'Not scheduled'}
+                            </div>
+                            <div class="detail-item">
+                                ⏰ ${booking.scheduled_time || booking.preferred_time || 'TBD'}
+                            </div>
+                            ${booking.base_price ? `<div class="detail-item">💰 $${booking.base_price}</div>` : ''}
+                        </div>
+                        
+                        ${booking.issue_description ? `<div style="margin-top: 0.5rem; color: #666;"><strong>Issue:</strong> ${booking.issue_description}</div>` : ''}
+                        ${booking.notes ? `<div style="margin-top: 0.5rem; color: #666;"><strong>Notes:</strong> ${booking.notes}</div>` : ''}
+                        
+                        ${booking.tech_name ? `
+                            <div class="tech-assigned">
+                                🔧 Assigned to: <strong>${booking.tech_name}</strong> (${booking.tech_phone})
+                            </div>
+                        ` : ''}
+                    </div>
+                    
+                    <div class="booking-actions">
+                        ${!booking.tech_id ? `
+                            <select id="techSelect-${booking.request_id}">
+                                <option value="">Assign Tech</option>
+                                ${technicians.map(tech => 
+                                    `<option value="${tech.tech_id}">${tech.name}</option>`
+                                ).join('')}
+                            </select>
+                            <input type="date" id="schedDate-${booking.request_id}" value="${booking.scheduled_date || ''}">
+                            <input type="time" id="schedTime-${booking.request_id}" value="${booking.scheduled_time || ''}">
+                            <button class="btn-assign" onclick="assignTech(${booking.request_id})">Assign</button>
+                        ` : ''}
+                        <button class="btn-view" onclick="viewDetails(${booking.request_id})">View Details</button>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        async function assignTech(requestId) {
+            const techId = document.getElementById(`techSelect-${requestId}`).value;
+            const schedDate = document.getElementById(`schedDate-${requestId}`).value;
+            const schedTime = document.getElementById(`schedTime-${requestId}`).value;
+
+            if (!techId || !schedDate || !schedTime) {
+                alert('Please select a technician, date, and time');
+                return;
+            }
+
+            try {
+                const response = await fetch(`${API_BASE}/api/dispatch/bookings/${requestId}/assign`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        tech_id: techId,
+                        scheduled_date: schedDate,
+                        scheduled_time: schedTime
+                    })
+                });
+
+                const data = await response.json();
+                
+                if (data.success) {
+                    alert('Tech assigned successfully!');
+                    loadStats();
+                    loadBookings();
+                } else {
+                    alert('Failed to assign tech: ' + data.message);
+                }
+            } catch (error) {
+                console.error('Assign error:', error);
+                alert('Failed to assign tech');
+            }
+        }
+
+        function viewDetails(requestId) {
+            // TODO: Open modal or navigate to detailed view
+            alert(`View details for booking #${requestId}`);
+        }
+    </script>
+</body>
+</html>
