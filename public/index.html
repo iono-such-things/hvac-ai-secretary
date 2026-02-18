@@ -265,14 +265,14 @@
 
             <!-- Header -->
             <div class="booking-header">
-                <h2 id="bookingModalTitle">Schedule Service</h2>
+                <h2 id="bookingModalTitle">Request a Call-Back</h2>
                 <p>M. Jacob Company · (412) 512-0425</p>
             </div>
 
             <div class="booking-body">
 
-                <!-- PATH CHOOSER -->
-                <div id="bkPaths">
+                <!-- PATH CHOOSER — hidden until slot booking is ready -->
+                <div id="bkPaths" style="display:none">
                     <div class="booking-paths">
                         <button class="booking-path-btn" onclick="choosePath('slot')">
                             <span class="path-icon">📅</span>
@@ -381,8 +381,7 @@
                 <!-- PATH B — Call-Back Form -->
                 <div id="bkCallSection" style="display:none">
                     <div class="step-header">
-                        <button class="step-back" onclick="backToPaths()">&#8592;</button>
-                        <h3>Request a Call-Back</h3>
+                        <h3>We'll call you to schedule</h3>
                     </div>
                     <form id="bkCallForm" onsubmit="submitCallBack(event)">
                         <div class="bk-form-row">

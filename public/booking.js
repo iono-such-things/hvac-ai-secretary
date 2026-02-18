@@ -32,7 +32,9 @@
     const overlay = el('bookingOverlay');
     overlay.classList.add('active');
     document.body.style.overflow = 'hidden';
-    showPathChooser();
+    // Go straight to call-back form (slot booking not yet enabled)
+    el('bookingModalTitle').textContent = 'Request a Call-Back';
+    showOnly('bkCallSection');
     if (preselect) {
       ['bkService','bkCallService'].forEach(function(id) {
         const s = el(id);
