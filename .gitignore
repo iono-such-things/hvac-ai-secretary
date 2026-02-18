@@ -9,6 +9,9 @@ yarn-error.log*
 .env.local
 .env.production
 
+# Google OAuth token (contains live credentials)
+data/google-token.json
+
 # OS files
 .DS_Store
 Thumbs.db

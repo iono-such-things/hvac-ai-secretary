@@ -1,131 +1,124 @@
-const express = require('express');
-const router = express.Router();
-const { pool } = require('../db');
+const express    = require('express');
+const router     = express.Router();
 const nodemailer = require('nodemailer');
+const { createBookingEvent } = require('../utils/calendar');
 
-// Configure email transporter
+// DB is optional — works email-only without it
+let pool = null;
+try { pool = require('../db').pool; } catch (e) {}
+
+// ---- email transporter ----
 const transporter = nodemailer.createTransport({
   service: 'gmail',
   auth: {
     user: process.env.GMAIL_USER,
-    pass: process.env.GMAIL_APP_PASSWORD
-  }
+    pass: process.env.GMAIL_APP_PASSWORD,
+  },
 });
 
-// POST /api/bookings - Create new booking from customer form
+function fmt12(hour) {
+  const ampm = hour < 12 ? 'AM' : 'PM';
+  const h    = hour % 12 || 12;
+  return `${h}:00 ${ampm}`;
+}
+
+function fmtDateStr(isoDate) {
+  if (!isoDate) return 'Not specified';
+  const [y, m, d] = isoDate.split('-').map(Number);
+  const date = new Date(y, m - 1, d);
+  return date.toLocaleDateString('en-US', { weekday:'long', month:'long', day:'numeric', year:'numeric' });
+}
+
+// ---- POST /api/bookings ----
 router.post('/', async (req, res) => {
   const {
-    name,
-    phone,
-    email,
-    service,
-    datetime,
-    message
+    type,        // 'booking' | 'callback'
+    name, phone, email, service, address,
+    date, slot,  // booking fields
+    best_time,   // callback field
+    notes,
   } = req.body;
 
+  if (!name || !phone || !service) {
+    return res.status(400).json({ success: false, message: 'Name, phone, and service are required' });
+  }
+
+  const now = new Date().toLocaleString('en-US', { timeZone: 'America/New_York' });
+
+  let subject, html;
+
+  if (type === 'callback') {
+    subject = `📞 Call-Back Request — ${name} — ${service}`;
+    html = `
+      <div style="font-family:sans-serif;max-width:600px">
+        <h2 style="color:#2563eb">📞 Call-Back Request</h2>
+        <table style="width:100%;border-collapse:collapse">
+          <tr><td style="padding:6px 0;color:#666;width:140px"><strong>Name</strong></td><td>${name}</td></tr>
+          <tr><td style="padding:6px 0;color:#666"><strong>Phone</strong></td><td>${phone}</td></tr>
+          <tr><td style="padding:6px 0;color:#666"><strong>Email</strong></td><td>${email || '—'}</td></tr>
+          <tr><td style="padding:6px 0;color:#666"><strong>Service</strong></td><td>${service}</td></tr>
+          <tr><td style="padding:6px 0;color:#666"><strong>Best Time</strong></td><td>${best_time || 'Anytime'}</td></tr>
+          <tr><td style="padding:6px 0;color:#666"><strong>Notes</strong></td><td>${notes || '—'}</td></tr>
+        </table>
+        <hr style="margin:16px 0;border:none;border-top:1px solid #eee">
+        <p style="color:#999;font-size:12px">Received: ${now} ET</p>
+      </div>
+    `;
+  } else {
+    // Regular time-slot booking
+    const dateLabel = fmtDateStr(date);
+    const timeLabel = slot !== undefined ? fmt12(Number(slot)) : 'Not specified';
+
+    subject = `📅 New Booking — ${name} — ${service} — ${dateLabel}`;
+    html = `
+      <div style="font-family:sans-serif;max-width:600px">
+        <h2 style="color:#2563eb">📅 New Appointment Request</h2>
+        <div style="background:#f0f7ff;border-left:4px solid #2563eb;padding:12px 16px;border-radius:4px;margin-bottom:16px">
+          <strong>${dateLabel} at ${timeLabel}</strong>
+        </div>
+        <table style="width:100%;border-collapse:collapse">
+          <tr><td style="padding:6px 0;color:#666;width:140px"><strong>Name</strong></td><td>${name}</td></tr>
+          <tr><td style="padding:6px 0;color:#666"><strong>Phone</strong></td><td>${phone}</td></tr>
+          <tr><td style="padding:6px 0;color:#666"><strong>Email</strong></td><td>${email || '—'}</td></tr>
+          <tr><td style="padding:6px 0;color:#666"><strong>Service</strong></td><td>${service}</td></tr>
+          <tr><td style="padding:6px 0;color:#666"><strong>Address</strong></td><td>${address || '—'}</td></tr>
+          <tr><td style="padding:6px 0;color:#666"><strong>Notes</strong></td><td>${notes || '—'}</td></tr>
+        </table>
+        <hr style="margin:16px 0;border:none;border-top:1px solid #eee">
+        <p style="color:#999;font-size:12px">Received: ${now} ET</p>
+      </div>
+    `;
+  }
+
   try {
-    // Validate required fields
-    if (!name || !phone || !service) {
-      return res.status(400).json({
-        success: false,
-        message: 'Name, phone, and service are required'
-      });
-    }
+    await transporter.sendMail({
+      from:    process.env.GMAIL_USER,
+      to:      process.env.NOTIFICATION_EMAIL || process.env.GMAIL_USER,
+      subject,
+      html,
+    });
 
-    // Send email notification
-    const mailOptions = {
-      from: process.env.GMAIL_USER,
-      to: process.env.NOTIFICATION_EMAIL || process.env.GMAIL_USER,
-      subject: `New Booking Request - ${service}`,
-      html: `
-        <h2>New Booking Request</h2>
-        <p><strong>Customer:</strong> ${name}</p>
-        <p><strong>Phone:</strong> ${phone}</p>
-        <p><strong>Email:</strong> ${email || 'Not provided'}</p>
-        <p><strong>Service:</strong> ${service}</p>
-        <p><strong>Preferred Date/Time:</strong> ${datetime || 'Not specified'}</p>
-        <p><strong>Message:</strong></p>
-        <p>${message || 'No additional message'}</p>
-        <hr>
-        <p><em>Received at: ${new Date().toLocaleString('en-US', { timeZone: 'America/New_York' })} ET</em></p>
-      `
-    };
-
-    await transporter.sendMail(mailOptions);
-
-    // Store in database if pool is available
-    let requestId = null;
-    if (pool) {
+    // For time-slot bookings, also create a Google Calendar event (non-fatal if it fails)
+    let calendarEvent = null;
+    if (type !== 'callback' && date && slot !== undefined) {
       try {
-        const result = await pool.query(
-          `INSERT INTO bookings (customer_name, phone, email, service, preferred_datetime, message, created_at)
-           VALUES ($1, $2, $3, $4, $5, $6, NOW())
-           RETURNING id`,
-          [name, phone, email || null, service, datetime || null, message || null]
-        );
-        requestId = result.rows[0].id;
-      } catch (dbError) {
-        console.error('Database storage failed (email sent successfully):', dbError.message);
+        calendarEvent = await createBookingEvent({ name, email, phone, service, address, date, slot: Number(slot), notes });
+        console.log('📅 Calendar event created:', calendarEvent.htmlLink);
+      } catch (calErr) {
+        // Calendar not yet connected or other error — email already sent, don't fail the booking
+        console.warn('Calendar event skipped:', calErr.message);
       }
     }
 
     res.status(201).json({
       success: true,
-      message: 'Booking request received! We will contact you shortly.',
-      request_id: requestId
+      message: 'Request received! We will be in touch shortly.',
+      calendarLink: calendarEvent ? calendarEvent.htmlLink : null,
     });
 
   } catch (error) {
-    console.error('Booking error:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Failed to process booking request',
-      error: error.message
-    });
-  }
-});
-
-// GET /api/bookings/:id - Get specific booking details
-router.get('/:id', async (req, res) => {
-  try {
-    const result = await pool.query(
-      `SELECT 
-        sr.request_id,
-        sr.status,
-        sr.priority,
-        sr.preferred_date,
-        sr.preferred_time,
-        sr.scheduled_date,
-        sr.scheduled_time,
-        sr.notes,
-        sr.issue_description,
-        c.name as customer_name,
-        c.phone,
-        c.email,
-        c.address,
-        c.city,
-        c.state,
-        c.zip,
-        st.service_name,
-        st.base_price,
-        t.name as tech_name,
-        t.phone as tech_phone
-      FROM SERVICE_REQUESTS sr
-      JOIN CUSTOMERS c ON sr.customer_id = c.customer_id
-      LEFT JOIN SERVICE_TYPES st ON sr.service_type_id = st.service_type_id
-      LEFT JOIN TECHNICIANS t ON sr.assigned_tech_id = t.tech_id
-      WHERE sr.request_id = $1`,
-      [req.params.id]
-    );
-
-    if (result.rows.length === 0) {
-      return res.status(404).json({ success: false, message: 'Booking not found' });
-    }
-
-    res.json({ success: true, booking: result.rows[0] });
-  } catch (error) {
-    console.error('Get booking error:', error);
-    res.status(500).json({ success: false, message: 'Failed to retrieve booking' });
+    console.error('Booking email error:', error.message);
+    res.status(500).json({ success: false, message: 'Failed to send request. Please call (412) 512-0425.' });
   }
 });
 

@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>M. Jacob Company - Pittsburgh HVAC Services</title>
     <link rel="stylesheet" href="./style.css">
+    <link rel="stylesheet" href="./booking.css">
 </head>
 <body>
     <!-- Navigation -->
@@ -39,7 +40,7 @@
                 <h2 class="hero-title">Pittsburgh's Trusted HVAC Experts</h2>
                 <p class="hero-subtitle">Family-owned heating and cooling services. Fast response, fair pricing, guaranteed satisfaction.</p>
                 <div class="hero-buttons">
-                    <button class="btn btn-primary" onclick="openModal()">Schedule Service</button>
+                    <button class="btn btn-primary" onclick="openBookingModal()">Schedule Service</button>
                     <a href="tel:4125120425" class="btn btn-secondary">Call Now</a>
                 </div>
                 <div class="hero-badges">
@@ -129,7 +130,7 @@
                         <li>Performance testing</li>
                         <li>Written report</li>
                     </ul>
-                    <button class="btn btn-outline" onclick="openModal('Clean & Check')">Schedule Now</button>
+                    <button class="btn btn-outline" onclick="openBookingModal('Clean &amp; Check')">Schedule Now</button>
                 </div>
 
                 <div class="pricing-card pricing-featured">
@@ -146,7 +147,7 @@
                         <li>1-year warranty on work</li>
                         <li>Senior & veteran discounts</li>
                     </ul>
-                    <button class="btn btn-primary" onclick="openModal('Service Call')">Request Service</button>
+                    <button class="btn btn-primary" onclick="openBookingModal('Service Call')">Request Service</button>
                 </div>
 
                 <div class="pricing-card">
@@ -162,7 +163,7 @@
                         <li>Financing options available</li>
                         <li>Lifetime support</li>
                     </ul>
-                    <button class="btn btn-outline" onclick="openModal('Installation')">Get Free Estimate</button>
+                    <button class="btn btn-outline" onclick="openBookingModal('Installation')">Get Free Estimate</button>
                 </div>
             </div>
         </div>
@@ -235,7 +236,7 @@
                 <h2>Ready to Get Started?</h2>
                 <p>Schedule your service or get a free quote today. Our team is here to help!</p>
                 <div class="cta-buttons">
-                    <button class="btn btn-primary btn-large" onclick="openModal()">Schedule Service</button>
+                    <button class="btn btn-primary btn-large" onclick="openBookingModal()">Schedule Service</button>
                     <a href="tel:4125120425" class="btn btn-secondary btn-large">Call: (412) 512-0425</a>
                 </div>
                 <div class="contact-info">
@@ -255,68 +256,196 @@
         </div>
     </footer>
 
-    <!-- Booking Modal -->
-    <div id="bookingModal" class="modal">
-        <div class="modal-content">
-            <button class="modal-close" onclick="closeModal()">&times;</button>
-            <h2>Schedule Your Service</h2>
-            <p class="modal-subtitle">Fill out the form below and we'll contact you to confirm your appointment.</p>
-            
-            <form id="bookingForm" onsubmit="handleSubmit(event)">
-                <div class="form-grid">
-                    <div class="form-group">
-                        <label for="name">Full Name *</label>
-                        <input type="text" id="name" name="name" required>
-                    </div>
-                    
-                    <div class="form-group">
-                        <label for="phone">Phone Number *</label>
-                        <input type="tel" id="phone" name="phone" required>
-                    </div>
-                    
-                    <div class="form-group">
-                        <label for="email">Email</label>
-                        <input type="email" id="email" name="email">
-                    </div>
-                    
-                    <div class="form-group">
-                        <label for="service">Service Type *</label>
-                        <select id="service" name="service" required>
-                            <option value="">Select a service...</option>
-                            <option value="Clean & Check">Clean & Check ($100)</option>
-                            <option value="Service Call">Service Call ($135)</option>
-                            <option value="Installation">New Installation (Free Estimate)</option>
-                            <option value="Emergency">Emergency Repair</option>
-                            <option value="Other">Other</option>
-                        </select>
+    <!-- ============================================================
+         Booking Modal Overlay
+         ============================================================ -->
+    <div id="bookingOverlay" class="booking-overlay">
+        <div class="booking-modal">
+            <button class="booking-close" onclick="closeBookingModal()">&#x2715;</button>
+
+            <!-- Header -->
+            <div class="booking-header">
+                <h2 id="bookingModalTitle">Schedule Service</h2>
+                <p>M. Jacob Company · (412) 512-0425</p>
+            </div>
+
+            <div class="booking-body">
+
+                <!-- PATH CHOOSER -->
+                <div id="bkPaths">
+                    <div class="booking-paths">
+                        <button class="booking-path-btn" onclick="choosePath('slot')">
+                            <span class="path-icon">📅</span>
+                            <span class="path-title">Pick a Time</span>
+                            <span class="path-desc">Choose a specific date &amp; hour</span>
+                        </button>
+                        <button class="booking-path-btn" onclick="choosePath('call')">
+                            <span class="path-icon">📞</span>
+                            <span class="path-title">Call Me Back</span>
+                            <span class="path-desc">We'll call you to schedule</span>
+                        </button>
                     </div>
                 </div>
-                
-                <div class="form-group">
-                    <label for="address">Service Address *</label>
-                    <input type="text" id="address" name="address" required>
+
+                <!-- STEP 1 — Calendar -->
+                <div id="bkCalSection" style="display:none">
+                    <div class="step-header">
+                        <button class="step-back" onclick="backToPaths()">&#8592;</button>
+                        <h3>Select a Date</h3>
+                    </div>
+                    <div class="bk-calendar">
+                        <div class="bk-cal-nav">
+                            <button id="bkCalPrev" onclick="calPrev()">&#8592;</button>
+                            <span id="bkCalMonthLabel" class="bk-cal-month"></span>
+                            <button id="bkCalNext" onclick="calNext()">&#8594;</button>
+                        </div>
+                        <div id="bkCalGrid" class="bk-cal-grid"></div>
+                    </div>
                 </div>
-                
-                <div class="form-group">
-                    <label for="date">Preferred Date *</label>
-                    <input type="date" id="date" name="date" required>
+
+                <!-- STEP 2 — Time Slots -->
+                <div id="bkSlotsSection" style="display:none">
+                    <div class="step-header">
+                        <button class="step-back" onclick="backToCalendar()">&#8592;</button>
+                        <h3>Select a Time</h3>
+                    </div>
+                    <p class="bk-slots-label" id="bkSlotsDateLabel"></p>
+                    <div id="bkSlotsGrid" class="bk-slots-grid"></div>
                 </div>
-                
-                <div class="form-group">
-                    <label for="notes">Additional Details</label>
-                    <textarea id="notes" name="notes" rows="3" placeholder="Tell us about your HVAC issue or service needs..."></textarea>
+
+                <!-- STEP 3 — Contact Details -->
+                <div id="bkFormSection" style="display:none">
+                    <div class="step-header">
+                        <button class="step-back" onclick="backToSlots()">&#8592;</button>
+                        <h3>Your Details</h3>
+                    </div>
+                    <div class="bk-summary-chip" id="bkFormChip"></div>
+                    <form id="bkBookingForm" onsubmit="submitBooking(event)">
+                        <div class="bk-form-row">
+                            <div class="bk-form-group">
+                                <label for="bkName">Full Name *</label>
+                                <input type="text" id="bkName" required placeholder="Jane Smith">
+                            </div>
+                            <div class="bk-form-group">
+                                <label for="bkPhone">Phone *</label>
+                                <input type="tel" id="bkPhone" required placeholder="(412) 555-0100">
+                            </div>
+                        </div>
+                        <div class="bk-form-row">
+                            <div class="bk-form-group">
+                                <label for="bkEmail">Email</label>
+                                <input type="email" id="bkEmail" placeholder="jane@example.com">
+                            </div>
+                            <div class="bk-form-group">
+                                <label for="bkService">Service *</label>
+                                <select id="bkService" required>
+                                    <option value="">Select…</option>
+                                    <option value="Clean &amp; Check">Clean &amp; Check ($100)</option>
+                                    <option value="Service Call">Service Call ($135)</option>
+                                    <option value="Installation">New Installation (Free Est.)</option>
+                                    <option value="Emergency">Emergency Repair</option>
+                                    <option value="Other">Other</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="bk-form-group">
+                            <label for="bkAddress">Service Address *</label>
+                            <input type="text" id="bkAddress" required placeholder="123 Main St, Pittsburgh PA">
+                        </div>
+                        <div class="bk-form-group">
+                            <label for="bkNotes">Additional Details</label>
+                            <textarea id="bkNotes" rows="3" placeholder="Describe the issue or any details that might help us prepare…"></textarea>
+                        </div>
+                        <div id="bkFormMsg" class="bk-msg"></div>
+                        <button type="submit" id="bkSubmitBtn" class="bk-btn bk-btn-primary">Confirm Booking</button>
+                    </form>
                 </div>
-                
-                <div class="form-message" id="formMessage"></div>
-                
-                <div class="form-actions">
-                    <button type="button" class="btn btn-secondary" onclick="closeModal()">Cancel</button>
-                    <button type="submit" class="btn btn-primary">Submit Request</button>
+
+                <!-- STEP 4 — Booking Confirmation -->
+                <div id="bkConfirmSection" style="display:none">
+                    <div class="bk-confirm">
+                        <div class="bk-confirm-icon">✅</div>
+                        <h3>You're Booked!</h3>
+                        <p>We've received your request and will send a confirmation email shortly.</p>
+                        <div class="bk-confirm-details">
+                            <p><strong>When:</strong> <span id="bkConfirmDate"></span></p>
+                            <p><strong>Who:</strong> <span id="bkConfirmName"></span></p>
+                            <p><strong>Service:</strong> <span id="bkConfirmSvc"></span></p>
+                            <p><strong>Where:</strong> <span id="bkConfirmAddr"></span></p>
+                        </div>
+                        <p>Questions? Call us at <strong>(412) 512-0425</strong></p>
+                        <button class="bk-btn bk-btn-primary" onclick="closeBookingModal()" style="margin-top:1rem">Done</button>
+                    </div>
                 </div>
-            </form>
-        </div>
-    </div>
+
+                <!-- PATH B — Call-Back Form -->
+                <div id="bkCallSection" style="display:none">
+                    <div class="step-header">
+                        <button class="step-back" onclick="backToPaths()">&#8592;</button>
+                        <h3>Request a Call-Back</h3>
+                    </div>
+                    <form id="bkCallForm" onsubmit="submitCallBack(event)">
+                        <div class="bk-form-row">
+                            <div class="bk-form-group">
+                                <label for="bkCallName">Full Name *</label>
+                                <input type="text" id="bkCallName" required placeholder="Jane Smith">
+                            </div>
+                            <div class="bk-form-group">
+                                <label for="bkCallPhone">Phone *</label>
+                                <input type="tel" id="bkCallPhone" required placeholder="(412) 555-0100">
+                            </div>
+                        </div>
+                        <div class="bk-form-group">
+                            <label for="bkCallEmail">Email</label>
+                            <input type="email" id="bkCallEmail" placeholder="jane@example.com">
+                        </div>
+                        <div class="bk-form-row">
+                            <div class="bk-form-group">
+                                <label for="bkCallService">Service Needed *</label>
+                                <select id="bkCallService" required>
+                                    <option value="">Select…</option>
+                                    <option value="Clean &amp; Check">Clean &amp; Check ($100)</option>
+                                    <option value="Service Call">Service Call ($135)</option>
+                                    <option value="Installation">New Installation (Free Est.)</option>
+                                    <option value="Emergency">Emergency Repair</option>
+                                    <option value="Other">Other / Not Sure</option>
+                                </select>
+                            </div>
+                            <div class="bk-form-group">
+                                <label for="bkCallBestTime">Best Time to Call</label>
+                                <select id="bkCallBestTime">
+                                    <option value="Morning (7am–12pm)">Morning (7am–12pm)</option>
+                                    <option value="Afternoon (12pm–5pm)">Afternoon (12pm–5pm)</option>
+                                    <option value="Evening (5pm–7pm)">Evening (5pm–7pm)</option>
+                                    <option value="Anytime">Anytime</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="bk-form-group">
+                            <label for="bkCallNotes">What's going on?</label>
+                            <textarea id="bkCallNotes" rows="3" placeholder="Briefly describe the issue…"></textarea>
+                        </div>
+                        <div id="bkCallMsg" class="bk-msg"></div>
+                        <button type="submit" id="bkCallSubmitBtn" class="bk-btn bk-btn-primary">Request Call-Back</button>
+                    </form>
+                </div>
+
+                <!-- PATH B Confirmation -->
+                <div id="bkCallConfirmSection" style="display:none">
+                    <div class="bk-confirm">
+                        <div class="bk-confirm-icon">📞</div>
+                        <h3>We'll Call You!</h3>
+                        <p>Thanks, <strong><span id="bkCallConfirmName"></span></strong>! We'll give you a call <span id="bkCallConfirmTime"></span>.</p>
+                        <p style="margin-top:0.75rem">Can't wait? Call us directly at <strong>(412) 512-0425</strong></p>
+                        <button class="bk-btn bk-btn-primary" onclick="closeBookingModal()" style="margin-top:1rem">Done</button>
+                    </div>
+                </div>
+
+            </div><!-- /booking-body -->
+        </div><!-- /booking-modal -->
+    </div><!-- /booking-overlay -->
 
     <script src="./script.js"></script>
+    <script src="./booking.js"></script>
 </body>
 </html>

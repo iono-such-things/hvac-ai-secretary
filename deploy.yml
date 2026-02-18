@@ -42,9 +42,19 @@ jobs:
             npm install --omit=dev
 
             echo "Creating .env file with secrets..."
-            echo "OPENAI_API_KEY=${{ secrets.OPENAI_API_KEY }}" > .env
-            echo "PORT=3145" >> .env
-            echo "NODE_ENV=production" >> .env
+            cat > .env << 'ENVEOF'
+PORT=3145
+NODE_ENV=production
+GMAIL_USER=${{ secrets.GMAIL_USER }}
+GMAIL_APP_PASSWORD=${{ secrets.GMAIL_APP_PASSWORD }}
+NOTIFICATION_EMAIL=${{ secrets.NOTIFICATION_EMAIL }}
+GOOGLE_CLIENT_ID=${{ secrets.GOOGLE_CLIENT_ID }}
+GOOGLE_CLIENT_SECRET=${{ secrets.GOOGLE_CLIENT_SECRET }}
+GOOGLE_REDIRECT_URI=${{ secrets.GOOGLE_REDIRECT_URI }}
+ENVEOF
+
+            echo "Ensuring data directory exists..."
+            mkdir -p $APP_DIR/data
 
             echo "Restarting service..."
             sudo systemctl restart hvac-ai-secretary
