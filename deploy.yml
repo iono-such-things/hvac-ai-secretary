@@ -42,8 +42,8 @@ jobs:
 
             cd $APP_DIR
 
-            echo "Clearing root-owned node_modules..."
-            sudo rm -rf node_modules
+            echo "Clearing node_modules..."
+            echo "${{ secrets.SERVER_PASSWORD }}" | sudo -S rm -rf node_modules
 
             echo "Installing dependencies..."
             npm install --omit=dev
