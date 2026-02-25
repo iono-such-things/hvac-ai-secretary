@@ -1,11 +1,11 @@
-const express    = require('express');
-const router     = express.Router();
+const express = require('express');
+const router = express.Router();
 const nodemailer = require('nodemailer');
 const { createBookingEvent } = require('../utils/calendar');
 
 // DB is optional — works email-only without it
 let pool = null;
-try { pool = require('../db').pool; } catch (e) {}
+try { pool = require('../db').pool; } catch (e) { }
 
 // ---- email transporter ----
 const transporter = nodemailer.createTransport({
@@ -18,7 +18,7 @@ const transporter = nodemailer.createTransport({
 
 function fmt12(hour) {
   const ampm = hour < 12 ? 'AM' : 'PM';
-  const h    = hour % 12 || 12;
+  const h = hour % 12 || 12;
   return `${h}:00 ${ampm}`;
 }
 
@@ -26,7 +26,7 @@ function fmtDateStr(isoDate) {
   if (!isoDate) return 'Not specified';
   const [y, m, d] = isoDate.split('-').map(Number);
   const date = new Date(y, m - 1, d);
-  return date.toLocaleDateString('en-US', { weekday:'long', month:'long', day:'numeric', year:'numeric' });
+  return date.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' });
 }
 
 // ---- POST /api/bookings ----
@@ -92,8 +92,8 @@ router.post('/', async (req, res) => {
 
   try {
     await transporter.sendMail({
-      from:    process.env.GMAIL_USER,
-      to:      process.env.NOTIFICATION_EMAIL || process.env.GMAIL_USER,
+      from: process.env.GMAIL_USER,
+      to: process.env.NOTIFICATION_EMAIL || process.env.GMAIL_USER,
       subject,
       html,
     });
@@ -108,6 +108,33 @@ router.post('/', async (req, res) => {
         // Calendar not yet connected or other error — email already sent, don't fail the booking
         console.warn('Calendar event skipped:', calErr.message);
       }
+    }
+
+    // ---- Partner webhook (Make.com) ----
+    if (process.env.PARTNER_WEBHOOK_URL) {
+      const payload = {
+        type: type || 'booking',
+        name,
+        phone,
+        email: email || null,
+        service,
+        address: address || null,
+        date: date || null,
+        slot: slot !== undefined ? Number(slot) : null,
+        best_time: best_time || null,
+        notes: notes || null,
+        calendarLink: calendarEvent ? calendarEvent.htmlLink : null,
+        submittedAt: new Date().toISOString(),
+      };
+      fetch(process.env.PARTNER_WEBHOOK_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      }).then(() => {
+        console.log('🔗 Partner webhook delivered');
+      }).catch((whErr) => {
+        console.warn('Partner webhook failed (non-fatal):', whErr.message);
+      });
     }
 
     res.status(201).json({
